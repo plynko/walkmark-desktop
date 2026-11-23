@@ -31,7 +31,7 @@
 </script>
 
 <header
-	data-tauri-drag-region
+	data-tauri-drag-region="deep"
 	class={cn(
 		"titlebar relative z-30 flex flex-none items-center gap-3 border-b border-(--text)/8 bg-(--bg-elevated) pr-3",
 		!isMac && "h-12",
@@ -41,7 +41,7 @@
 		<div class="w-3 shrink-0" data-tauri-drag-region aria-hidden="true"></div>
 	{/if}
 
-	<div class="no-drag flex min-w-0 flex-1 items-center gap-3">
+	<div class="flex min-w-0 flex-1 items-center gap-3">
 		{#if store.route === "editor" && store.project}
 			{#if !store.recording}
 				<Button
@@ -87,7 +87,7 @@
 		{/if}
 	</div>
 
-	<div class="no-drag flex items-center gap-2.5">
+	<div class="flex items-center gap-2.5">
 		{#if store.recording}
 			<div class="flex items-center gap-2 rounded-2xl bg-red-500/10 px-3 py-1.5">
 				{#if store.stoppingRecording}

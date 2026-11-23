@@ -39,6 +39,20 @@
 			shortcut: 'H'
 		},
 		{
+			value: 'tint',
+			label: 'Tint',
+			icon: 'lucide:square-dashed',
+			hint: 'Drag a translucent rectangle over an area',
+			shortcut: 'T'
+		},
+		{
+			value: 'arrow',
+			label: 'Arrow',
+			icon: 'lucide:arrow-right',
+			hint: 'Drag from the tail to the point you want to mark',
+			shortcut: 'A'
+		},
+		{
 			value: 'crop',
 			label: 'Crop',
 			icon: 'lucide:crop',
@@ -57,14 +71,16 @@
 
 <script lang="ts">
 	import mouseMarker from '$lib/assets/mouse-marker.png';
-	import type { Annotation, Rect } from '$lib/types';
+	import type { Annotation, ArrowDirection, Rect } from '$lib/types';
 	import { cn } from '$lib/utils';
 	import {
 		annotationClasses,
 		annotationStyle,
 		defaultColor,
-		draftStyle
+		draftStyle,
+		resolveColor
 	} from './annotation-styles';
+	import ArrowShape from './ArrowShape.svelte';
 
 	let {
 		annotations,
@@ -96,16 +112,21 @@
 	const MIN_SIZE = 0.012;
 
 	let surfaceRef = $state<HTMLDivElement | null>(null);
+	let surfaceWidth = $state(0);
+	let surfaceHeight = $state(0);
 	let draft = $state<Rect | null>(null);
+	let draftArrow = $state<ArrowDirection>();
 	let origin = $state<{ x: number; y: number } | null>(null);
 	let gesture = $state<{ id: number; tool: Tool; annotation?: Annotation } | null>(null);
 
 	const visibleAnnotations = $derived.by(() => {
 		const view = visibleRegion;
 		if (!view) return annotations;
-		return annotations.filter(({ rect }) =>
-			rect.x < view.x + view.w && rect.x + rect.w > view.x &&
-			rect.y < view.y + view.h && rect.y + rect.h > view.y
+		return annotations.filter(({ rect, kind }) => kind === 'arrow'
+			? rect.x <= view.x + view.w && rect.x + rect.w >= view.x &&
+				rect.y <= view.y + view.h && rect.y + rect.h >= view.y
+			: rect.x < view.x + view.w && rect.x + rect.w > view.x &&
+				rect.y < view.y + view.h && rect.y + rect.h > view.y
 		);
 	});
 
@@ -122,8 +143,9 @@
 		};
 	}
 
-	function toStyle(rect: Rect) {
-		return `left:${rect.x * 100}%;top:${rect.y * 100}%;width:${rect.w * 100}%;height:${rect.h * 100}%`;
+	function toStyle(rect: Rect, arrow = false) {
+		const pad = arrow ? 7 : 0;
+		return `left:calc(${rect.x * 100}% - ${pad}px);top:calc(${rect.y * 100}% - ${pad}px);width:calc(${rect.w * 100}% + ${2 * pad}px);height:calc(${rect.h * 100}% + ${2 * pad}px)`;
 	}
 
 	function onPointerDown(event: PointerEvent) {
@@ -170,12 +192,16 @@
 			w: Math.abs(point.x - origin.x),
 			h: Math.abs(point.y - origin.y)
 		};
+		if (gesture.tool === 'arrow') {
+			draftArrow = { reverseX: point.x < origin.x, reverseY: point.y < origin.y };
+		}
 	}
 
 	function cancelGesture() {
 		gesture = null;
 		origin = null;
 		draft = null;
+		draftArrow = undefined;
 	}
 
 	function onPointerUp(event: PointerEvent) {
@@ -184,6 +210,7 @@
 		let rect = draft;
 		const start = origin;
 		const moved = gesture.annotation;
+		const direction = draftArrow;
 		cancelGesture();
 		if (tool === 'select') {
 			if (moved && rect) {
@@ -203,7 +230,10 @@
 			const h = size / box.height;
 			rect = { x: point.x - w / 2, y: point.y - h / 2, w, h };
 		}
-		if (!rect || (tool !== 'mouse' && (rect.w < MIN_SIZE || rect.h < MIN_SIZE))) return;
+		if (!rect) return;
+		if (tool === 'arrow') {
+			if (Math.hypot(rect.w * surfaceWidth, rect.h * surfaceHeight) < 8) return;
+		} else if (tool !== 'mouse' && (rect.w < MIN_SIZE || rect.h < MIN_SIZE)) return;
 		if (tool === 'crop') {
 			onCropSelect?.(rect);
 			return;
@@ -218,14 +248,25 @@
 		const fill = color ?? defaultColor(kind);
 		if (fill) next.color = fill;
 		if (kind === 'highlight') next.stroke = stroke;
+		if (kind === 'arrow') next.arrow = direction;
 
 		onChange([...annotations, next]);
 	}
 </script>
 
+{#snippet shape(annotation: Annotation, rect: Rect)}
+	{#if annotation.kind === 'mouse'}
+		<img src={mouseMarker} alt="" class="pointer-events-none absolute inset-0 size-full" />
+	{:else if annotation.kind === 'arrow'}
+		<ArrowShape {rect} direction={annotation.arrow} {surfaceWidth} {surfaceHeight} color={resolveColor(annotation) ?? 'currentColor'} />
+	{/if}
+{/snippet}
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	bind:this={surfaceRef}
+	bind:clientWidth={surfaceWidth}
+	bind:clientHeight={surfaceHeight}
 	data-slot="annotation-surface"
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
@@ -249,25 +290,21 @@
 				aria-pressed={isSelected}
 				aria-label={annotation.kind === 'mouse' ? 'Cursor marker' : `${annotation.kind} annotation`}
 				onclick={() => (selected = annotation.id)}
-				style="{toStyle(rect)};{annotationStyle(annotation) ?? ''}"
+				style="{toStyle(rect, annotation.kind === 'arrow')};{annotationStyle(annotation) ?? ''}"
 				class={cn(
 					annotationClasses(annotation, isSelected),
 					'cursor-grab active:cursor-grabbing'
 				)}
 			>
-				{#if annotation.kind === 'mouse'}
-					<img src={mouseMarker} alt="" class="pointer-events-none absolute inset-0 size-full" />
-				{/if}
+				{@render shape(annotation, rect)}
 			</button>
 		{:else}
 			<div
 				aria-hidden="true"
-				style="{toStyle(annotation.rect)};{annotationStyle(annotation) ?? ''}"
+				style="{toStyle(rect, annotation.kind === 'arrow')};{annotationStyle(annotation) ?? ''}"
 				class={cn(annotationClasses(annotation, isSelected), 'pointer-events-none')}
 			>
-				{#if annotation.kind === 'mouse'}
-					<img src={mouseMarker} alt="" class="absolute inset-0 size-full" />
-				{/if}
+				{@render shape(annotation, rect)}
 			</div>
 		{/if}
 	{/each}
@@ -281,6 +318,10 @@
 				style={toStyle(region)}
 			></div>
 		{/if}
+	{:else if draft && tool === 'arrow'}
+		<div aria-hidden="true" class="pointer-events-none absolute" style={toStyle(draft, true)}>
+			<ArrowShape rect={draft} direction={draftArrow} {surfaceWidth} {surfaceHeight} color={color ?? defaultColor('arrow')!} />
+		</div>
 	{:else if draft && tool !== 'select'}
 		<div
 			class={cn(

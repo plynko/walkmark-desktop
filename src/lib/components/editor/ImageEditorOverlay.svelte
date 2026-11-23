@@ -8,10 +8,13 @@
 	import ScreenshotViewport from './ScreenshotViewport.svelte';
 	import { isMacOS } from '$lib/window';
 	import {
+		DEFAULT_ARROW,
 		DEFAULT_HIGHLIGHT,
 		DEFAULT_REDACT,
+		DEFAULT_TINT,
 		HIGHLIGHT_COLORS,
 		REDACT_COLORS,
+		resolveColor,
 		STROKE_OPTIONS
 	} from './annotation-styles';
 
@@ -40,8 +43,12 @@
 	const isMac = isMacOS();
 
 	let selected = $state<string | null>(null);
-	let highlightColor = $state(DEFAULT_HIGHLIGHT);
-	let redactColor = $state(DEFAULT_REDACT);
+	let colors = $state({
+		highlight: DEFAULT_HIGHLIGHT,
+		redact: DEFAULT_REDACT,
+		tint: DEFAULT_TINT,
+		arrow: DEFAULT_ARROW,
+	});
 	let stroke = $state<AnnotationStroke>('medium');
 	let cropDraft = $state<Rect | null>(null);
 	let undoHistory = $state<Annotation[][]>([]);
@@ -60,16 +67,22 @@
 	}
 
 	const activeTool = $derived(TOOLS.find((t) => t.value === tool) ?? TOOLS[0]);
-	const activeColor = $derived(
-		tool === 'highlight' ? highlightColor : tool === 'redact' ? redactColor : undefined
-	);
-	const showColors = $derived(tool === 'highlight' || tool === 'redact');
-	const showStroke = $derived(tool === 'highlight');
-	const colorOptions = $derived(tool === 'redact' ? REDACT_COLORS : HIGHLIGHT_COLORS);
-
 	const selectedAnnotation = $derived(
 		selected ? annotations.find((a) => a.id === selected) : undefined
 	);
+	const colorTool = $derived(tool === 'select' ? selectedAnnotation?.kind : tool);
+	const activeColor = $derived(
+		hasColor(colorTool)
+			? (tool === 'select' && selectedAnnotation ? resolveColor(selectedAnnotation) : colors[colorTool])
+			: undefined
+	);
+	const showColors = $derived(hasColor(colorTool));
+	const showStroke = $derived(colorTool === 'highlight');
+	const colorOptions = $derived(colorTool === 'redact' ? REDACT_COLORS : HIGHLIGHT_COLORS);
+
+	function hasColor(kind: Tool | undefined): kind is keyof typeof colors {
+		return kind === 'highlight' || kind === 'redact' || kind === 'tint' || kind === 'arrow';
+	}
 
 	function setAnnotations(next: Annotation[]) {
 		undoHistory = [...undoHistory, annotations];
@@ -90,20 +103,12 @@
 	}
 
 	function pickColor(hex: string) {
-		if (tool === 'highlight') highlightColor = hex;
-		if (tool === 'redact') redactColor = hex;
-
-		if (!selected || !selectedAnnotation) return;
-		if (
-			(tool === 'highlight' && selectedAnnotation.kind !== 'highlight') ||
-			(tool === 'redact' && selectedAnnotation.kind !== 'redact')
-		) {
-			return;
+		if (!hasColor(colorTool)) return;
+		if (tool === 'select' && selectedAnnotation) {
+			setAnnotations(annotations.map((a) => (a.id === selected ? { ...a, color: hex } : a)));
+		} else {
+			colors[colorTool] = hex;
 		}
-
-		setAnnotations(
-			annotations.map((a) => (a.id === selected ? { ...a, color: hex } : a))
-		);
 	}
 
 	function pickStroke(next: AnnotationStroke) {
@@ -161,12 +166,6 @@
 
 	$effect(() => {
 		if (!selectedAnnotation) return;
-		if (selectedAnnotation.kind === 'highlight' && selectedAnnotation.color) {
-			highlightColor = selectedAnnotation.color;
-		}
-		if (selectedAnnotation.kind === 'redact' && selectedAnnotation.color) {
-			redactColor = selectedAnnotation.color;
-		}
 		if (selectedAnnotation.kind === 'highlight' && selectedAnnotation.stroke) {
 			stroke = selectedAnnotation.stroke;
 		}
@@ -181,13 +180,13 @@
 		aria-label="Edit screenshot"
 	>
 		<header
-			data-tauri-drag-region
+			data-tauri-drag-region="deep"
 			class={cn(
 				'titlebar flex shrink-0 items-center gap-3 border-b border-(--text)/8 pr-4 py-3 sm:pr-6',
 				!isMac && 'h-12 pl-4 sm:pl-6'
 			)}
 		>
-			<p class="no-drag min-w-0 flex-1 truncate text-sm font-medium text-(--text)">
+			<p class="min-w-0 flex-1 truncate text-sm font-medium text-(--text)">
 				{title || 'Edit screenshot'}
 			</p>
 			<Button size="sm" class="no-drag shrink-0" onclick={onClose}>Done</Button>
@@ -233,7 +232,7 @@
 							<button
 								type="button"
 								onclick={() => (tool = t.value)}
-								data-tooltip="{t.label} ({t.shortcut})"
+								data-tooltip="{t.label} ({t.shortcut}) · {t.hint}"
 								aria-label={t.label}
 								aria-pressed={tool === t.value}
 								class={cn(
@@ -267,7 +266,7 @@
 						<div
 							class="flex items-center gap-1.5"
 							role="group"
-							aria-label={tool === 'highlight' ? 'Highlight colour' : 'Cover colour'}
+							aria-label="Annotation colour"
 						>
 							{#each colorOptions as option (option.hex)}
 								<button
@@ -355,7 +354,7 @@
 				<p class="mt-2 px-1 text-[11px] text-(--text)/40">
 					<span class="text-(--text)/55">{activeTool.hint}.</span>
 					<span class="hidden sm:inline">
-						Shortcuts: V select · B blur · R cover · H highlight · C crop · M cursor · ⌘Z undo · Delete removes
+						Shortcuts: V select · B blur · R cover · H highlight · T tint · A arrow · C crop · M cursor · ⌘Z undo
 						selection
 					</span>
 				</p>

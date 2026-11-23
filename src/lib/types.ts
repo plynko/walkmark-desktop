@@ -14,7 +14,9 @@ export interface CaptureSource {
   thumbnail: string | null;
 }
 
-export type AnnotationKind = "blur" | "redact" | "highlight" | "mouse";
+export type AnnotationKind = "blur" | "redact" | "highlight" | "mouse" | "tint" | "arrow";
+
+export type ArrowDirection = { reverseX: boolean; reverseY: boolean };
 
 /** Normalised 0..1 coordinates, so annotations survive any resize. */
 export interface Rect {
@@ -35,6 +37,7 @@ export interface Annotation {
   color?: string;
   /** Highlight outline weight. Ignored for blur and redact. */
   stroke?: AnnotationStroke;
+  arrow?: ArrowDirection | null;
 }
 
 export type StepStatus = "draft" | "queued" | "generating" | "ready" | "failed";

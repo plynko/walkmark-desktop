@@ -28,10 +28,12 @@ img {
 }
 
 .drag-region,
-[data-tauri-drag-region] {
+[data-tauri-drag-region]:not([data-tauri-drag-region="false"]) {
 	-webkit-app-region: drag;
 }
-.no-drag {
+.no-drag,
+[data-tauri-drag-region="false"],
+[data-tauri-drag-region="deep"] :is(a, button, input, select, textarea, label, summary, [role="button"], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"])) {
 	-webkit-app-region: no-drag;
 }
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.20.0 — 2026-11-23
+## 0.2.1 — 2026-11-23
 
 - Return to the library from an open guide with Home.
 - Add an individual screenshot to an existing guide by capturing, importing, or pasting it. Choose another frame explains how to swap in a nearby recording frame.
@@ -8,6 +8,7 @@
 - Delete steps without jumping to the top of the guide, and restore the most recent deletion with Undo.
 - Polish the existing title and description of a step with AI. Guide summaries and step descriptions grow to fit and support Markdown previews.
 - Show tooltips for icon buttons and bundle interface icons for offline use.
+- Make the full title bar draggable around its controls and add an About tab in Settings.
 
 ## 0.1.1 — 2026-08-09
 

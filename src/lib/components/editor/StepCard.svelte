@@ -281,7 +281,7 @@
 						type="button"
 						onpointerdown={(event) => event.stopPropagation()}
 						onclick={() => openImageEditor(t.value)}
-						data-tooltip="{t.label} ({t.shortcut})"
+						data-tooltip="{t.label} ({t.shortcut}) · {t.hint}"
 						aria-label={t.label}
 						class="grid size-7 place-items-center rounded-lg text-white/70 transition-colors hover:bg-white/15 hover:text-white"
 					>

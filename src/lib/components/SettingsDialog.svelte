@@ -1,5 +1,10 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
+	import { getVersion } from "@tauri-apps/api/app";
+	import { openUrl } from "@tauri-apps/plugin-opener";
+	import { version as buildVersion } from "../../../package.json";
+	import appIcon from "../../../src-tauri/icons/128x128.png";
+	import { APP_NAME, REPOSITORY_URL } from "$lib/brand";
 	import { store } from "$lib/store.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import { Label } from "$lib/components/ui/label";
@@ -24,10 +29,23 @@
 	}
 
 	let tab = $state("model");
+	let version = $state(buildVersion);
 
 	$effect(() => {
 		if (open) tab = store.settingsTab;
 	});
+
+	$effect(() => {
+		if (!open || tab !== "about") return;
+		void getVersion()
+			.then((value) => { if (value) version = value; })
+			.catch(() => {});
+	});
+
+	function openRepository(event: MouseEvent) {
+		event.preventDefault();
+		void openUrl(REPOSITORY_URL).catch((error) => store.reportError(error, "Could not open the repository"));
+	}
 </script>
 
 <Dialog {open} onOpenChange={handleOpenChange}>
@@ -55,6 +73,10 @@
 				<TabsTrigger value="appearance" class="w-full justify-start gap-2 rounded-2xl px-3 py-2">
 					<Icon icon="lucide:palette" class="size-4 shrink-0 opacity-60" />
 					Appearance
+				</TabsTrigger>
+				<TabsTrigger value="about" class="w-full justify-start gap-2 rounded-2xl px-3 py-2">
+					<Icon icon="lucide:info" class="size-4 shrink-0 opacity-60" aria-hidden="true" />
+					About
 				</TabsTrigger>
 			</TabsList>
 
@@ -100,6 +122,27 @@
 								<ToggleGroupItem value="light">Light</ToggleGroupItem>
 								<ToggleGroupItem value="dark">Dark</ToggleGroupItem>
 							</ToggleGroup>
+						</div>
+					</TabsContent>
+
+					<TabsContent value="about" class="mt-0 pb-4">
+						<div class="flex items-center gap-4 pb-5">
+							<img src={appIcon} alt="" width="64" height="64" class="size-16 shrink-0" />
+							<div class="min-w-0">
+								<h2 class="text-xl font-semibold">{APP_NAME}</h2>
+								<p class="text-sm text-(--text)/56">Version {version}</p>
+							</div>
+						</div>
+						<div class="border-t border-(--text)/8 pt-4">
+							<p class="mb-1 text-xs font-medium text-(--text)/56">Source repository</p>
+							<a
+								href={REPOSITORY_URL}
+								onclick={openRepository}
+								class="inline-flex max-w-full items-baseline gap-1.5 rounded-sm text-sm underline decoration-(--text)/30 underline-offset-2 hover:decoration-current focus-visible:outline-2"
+							>
+								<span class="break-all">{REPOSITORY_URL}</span>
+								<Icon icon="lucide:external-link" class="size-3 shrink-0" aria-hidden="true" />
+							</a>
 						</div>
 					</TabsContent>
 				</div>

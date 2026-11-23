@@ -51,6 +51,9 @@ pub enum AnnotationKind {
     Redact,
     /// Draw an accent outline to draw the eye.
     Highlight,
+    /// Tint a rectangle without covering the pixels underneath.
+    Tint,
+    Arrow,
     /// Mark a click with a pointer and a translucent halo.
     Mouse,
 }
@@ -90,6 +93,13 @@ pub enum AnnotationStroke {
     Thick,
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArrowDirection {
+    pub reverse_x: bool,
+    pub reverse_y: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotation {
@@ -97,11 +107,14 @@ pub struct Annotation {
     pub id: String,
     pub kind: AnnotationKind,
     pub rect: Rect,
-    /// `#rrggbb` — highlight outline and redact fill.
+    /// `#rrggbb` — applied by tools that support colour.
     #[serde(default)]
     pub color: Option<String>,
     #[serde(default)]
     pub stroke: Option<AnnotationStroke>,
+    /// The start corner of the arrow's bounding rectangle.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arrow: Option<ArrowDirection>,
 }
 
 // ---------------------------------------------------------------------------

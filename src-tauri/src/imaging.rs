@@ -8,6 +8,8 @@ use crate::models::{Annotation, AnnotationKind, AnnotationStroke, Rect};
 /// Walkmark's default accent when no colour is stored on the annotation.
 const HIGHLIGHT: Rgba<u8> = Rgba([99, 102, 241, 255]);
 const REDACT_FILL: Rgba<u8> = Rgba([24, 24, 27, 255]);
+const TINT_FILL: Rgba<u8> = Rgba([245, 158, 11, 255]);
+const ARROW_COLOR: Rgba<u8> = Rgba([239, 68, 68, 255]);
 
 pub fn load(path: &Path) -> Result<RgbaImage> {
     Ok(image::open(path)?.to_rgba8())
@@ -42,6 +44,7 @@ pub fn apply_annotations(mut image: RgbaImage, annotations: &[Annotation]) -> Rg
         let (x, y, rw, rh) = ann.rect.to_pixels(w, h);
         match ann.kind {
             AnnotationKind::Mouse => draw_mouse(&mut image, ann.rect),
+            AnnotationKind::Arrow => draw_arrow(&mut image, ann, (x, y, rw, rh)),
             _ if rw == 0 || rh == 0 => continue,
             AnnotationKind::Blur => mosaic(&mut image, x, y, rw, rh),
             AnnotationKind::Redact => {
@@ -55,9 +58,98 @@ pub fn apply_annotations(mut image: RgbaImage, annotations: &[Annotation]) -> Rg
                 let stroke = highlight_stroke(w, ann.stroke);
                 outline(&mut image, x, y, rw, rh, color, stroke);
             }
+            AnnotationKind::Tint => {
+                let mut color = annotation_color(ann, TINT_FILL);
+                color.0[3] = 0x55;
+                blend_fill(&mut image, x, y, rw, rh, color);
+            }
         }
     }
     image
+}
+
+fn draw_arrow(image: &mut RgbaImage, ann: &Annotation, bounds: (u32, u32, u32, u32)) {
+    let (x, y, w, h) = bounds;
+    let direction = ann.arrow.unwrap_or_default();
+    let from = (
+        (if direction.reverse_x { x + w } else { x }) as f32,
+        (if direction.reverse_y { y + h } else { y }) as f32,
+    );
+    let tip = (
+        (if direction.reverse_x { x } else { x + w }) as f32,
+        (if direction.reverse_y { y } else { y + h }) as f32,
+    );
+    let dx = tip.0 - from.0;
+    let dy = tip.1 - from.1;
+    let distance = dx.hypot(dy);
+    if distance == 0.0 {
+        return;
+    }
+    // Keep these proportions in sync with ArrowShape.svelte.
+    let stroke = (image.width() as f32 * 0.0035).max(1.0);
+    let color = annotation_color(ann, ARROW_COLOR);
+    let head = (distance * 0.38).min(stroke * 4.5);
+    let spread = head * 0.48;
+    let (ux, uy) = (dx / distance, dy / distance);
+    let base = (tip.0 - ux * head, tip.1 - uy * head);
+    paint_segment(image, from, tip, stroke, color);
+    paint_segment(
+        image,
+        (base.0 - uy * spread, base.1 + ux * spread),
+        tip,
+        stroke,
+        color,
+    );
+    paint_segment(
+        image,
+        (base.0 + uy * spread, base.1 - ux * spread),
+        tip,
+        stroke,
+        color,
+    );
+}
+
+fn paint_segment(
+    image: &mut RgbaImage,
+    from: (f32, f32),
+    to: (f32, f32),
+    stroke: f32,
+    color: Rgba<u8>,
+) {
+    let (dx, dy) = (to.0 - from.0, to.1 - from.1);
+    let length_squared = dx * dx + dy * dy;
+    if length_squared == 0.0 {
+        return;
+    }
+    let radius = stroke / 2.0 + 0.5;
+    let y0 = (from.1.min(to.1) - radius).floor() as u32;
+    let y1 = ((from.1.max(to.1) + radius).ceil() as u32).min(image.height());
+    for y in y0..y1 {
+        let py = y as f32 + 0.5 - from.1;
+        // Only visit columns that could intersect the stroke in this row.
+        let (a, b) = if dy == 0.0 {
+            (0.0, 1.0)
+        } else {
+            (
+                ((py - radius) / dy).clamp(0.0, 1.0),
+                ((py + radius) / dy).clamp(0.0, 1.0),
+            )
+        };
+        let (xa, xb) = (from.0 + a * dx, from.0 + b * dx);
+        let x0 = (xa.min(xb) - radius).floor() as u32;
+        let x1 = ((xa.max(xb) + radius).ceil() as u32).min(image.width());
+        for x in x0..x1 {
+            let px = x as f32 + 0.5 - from.0;
+            let t = ((px * dx + py * dy) / length_squared).clamp(0.0, 1.0);
+            let coverage = (radius - (px - t * dx).hypot(py - t * dy)).clamp(0.0, 1.0);
+            if coverage > 0.0 {
+                let pixel = image.get_pixel_mut(x, y);
+                for channel in 0..3 {
+                    pixel.0[channel] = lerp(pixel.0[channel], color.0[channel], coverage);
+                }
+            }
+        }
+    }
 }
 
 fn draw_mouse(image: &mut RgbaImage, rect: Rect) {
@@ -111,7 +203,7 @@ fn annotation_color(ann: &Annotation, fallback: Rgba<u8>) -> Rgba<u8> {
 
 fn parse_hex_color(hex: &str) -> Option<Rgba<u8>> {
     let hex = hex.trim().trim_start_matches('#');
-    if hex.len() != 6 {
+    if hex.len() != 6 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
     }
     let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
@@ -232,6 +324,55 @@ pub fn encode_png(image: &RgbaImage) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::ArrowDirection;
+
+    #[test]
+    fn tint_blends_the_selected_colour_over_the_screenshot() {
+        let background = Rgba([30, 60, 90, 255]);
+        let image = RgbaImage::from_pixel(40, 40, background);
+        let tint = Annotation {
+            id: "tint".into(),
+            kind: AnnotationKind::Tint,
+            rect: Rect {
+                x: 0.25,
+                y: 0.25,
+                w: 0.5,
+                h: 0.5,
+            },
+            color: Some("#00ff00".into()),
+            stroke: None,
+            arrow: None,
+        };
+        let output = apply_annotations(image, &[tint]);
+        assert_eq!(*output.get_pixel(20, 20), Rgba([20, 125, 60, 255]));
+        assert_eq!(*output.get_pixel(0, 0), background);
+    }
+
+    #[test]
+    fn horizontal_arrow_points_to_the_end_of_a_right_to_left_drag() {
+        let background = Rgba([255, 255, 255, 255]);
+        let image = RgbaImage::from_pixel(1000, 300, background);
+        let arrow = Annotation {
+            id: "arrow".into(),
+            kind: AnnotationKind::Arrow,
+            rect: Rect {
+                x: 0.2,
+                y: 0.5,
+                w: 0.6,
+                h: 0.0,
+            },
+            color: None,
+            stroke: None,
+            arrow: Some(ArrowDirection {
+                reverse_x: true,
+                reverse_y: false,
+            }),
+        };
+        let output = apply_annotations(image, &[arrow]);
+        assert_eq!(*output.get_pixel(400, 149), ARROW_COLOR);
+        assert_ne!(*output.get_pixel(214, 156), background);
+        assert_eq!(*output.get_pixel(785, 156), background);
+    }
 
     #[test]
     fn crop_keeps_mouse_marker_at_its_original_click_position() {
@@ -248,6 +389,7 @@ mod tests {
             },
             color: None,
             stroke: None,
+            arrow: None,
         };
         let crop = Rect {
             x: 0.5,
@@ -280,6 +422,7 @@ mod tests {
                 },
                 color: Some("#ef4444".into()),
                 stroke: Some(AnnotationStroke::Thick),
+                arrow: None,
             }],
         );
         let edge = out.get_pixel(10, 10).0;
@@ -304,6 +447,7 @@ mod tests {
                 },
                 color: Some("#ffffff".into()),
                 stroke: None,
+                arrow: None,
             }],
         );
         assert_eq!(out.get_pixel(5, 5).0, [255, 255, 255, 255]);

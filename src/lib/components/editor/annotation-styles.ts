@@ -2,6 +2,8 @@ import type { Annotation, AnnotationKind, AnnotationStroke } from '$lib/types';
 
 export const DEFAULT_HIGHLIGHT = '#6366f1';
 export const DEFAULT_REDACT = '#18181b';
+export const DEFAULT_TINT = '#f59e0b';
+export const DEFAULT_ARROW = '#ef4444';
 
 export const HIGHLIGHT_COLORS = [
 	{ hex: '#6366f1', label: 'Indigo' },
@@ -28,6 +30,8 @@ export const STROKE_OPTIONS: { value: AnnotationStroke; label: string }[] = [
 export function defaultColor(kind: AnnotationKind): string | undefined {
 	if (kind === 'highlight') return DEFAULT_HIGHLIGHT;
 	if (kind === 'redact') return DEFAULT_REDACT;
+	if (kind === 'tint') return DEFAULT_TINT;
+	if (kind === 'arrow') return DEFAULT_ARROW;
 	return undefined;
 }
 
@@ -70,6 +74,9 @@ export function annotationStyle(annotation: Annotation): string | undefined {
 	if (annotation.kind === 'highlight') {
 		return `border-color:${color};background:${color}22`;
 	}
+	if (annotation.kind === 'tint') {
+		return `background:${color}55`;
+	}
 	return undefined;
 }
 
@@ -79,6 +86,10 @@ export function draftStyle(tool: AnnotationKind, color?: string): string | undef
 	}
 	if (tool === 'redact' && color) {
 		return `border-color:${color};background:${color}88`;
+	}
+	if (tool === 'tint') {
+		const fill = color ?? DEFAULT_TINT;
+		return `border-color:${fill};background:${fill}55`;
 	}
 	return undefined;
 }

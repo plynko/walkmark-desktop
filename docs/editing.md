@@ -91,6 +91,8 @@ Open the **image editor** on a step screenshot (pencil icon or click the image):
 | **Blur** | B | Pixelate sensitive details |
 | **Cover** | R | Solid fill over a region |
 | **Highlight** | H | Coloured box around a control |
+| **Tint** | T | Drag a coloured rectangle that leaves the screenshot visible underneath |
+| **Arrow** | A | Drag from the tail of the arrow to the point you want to mark |
 | **Crop** | C | Drag over the area to keep, then click **Apply crop** |
 | **Cursor** | M | Place the tip of an arrow cursor at the clicked point, with a translucent yellow halo |
 
@@ -99,7 +101,7 @@ Use **Undo** to reverse the last annotation change.
 
 The crop and annotations are applied to exported images and to images sent to the model when you run **Write**. Blur or cover sensitive details before writing.
 
-Highlight and Cover support colour and stroke options in the toolbar.
+Highlight, Cover, Tint and Arrow support colour options in the toolbar. Highlight also supports outline weight.
 
 ## Pick a different moment
 
