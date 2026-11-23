@@ -162,7 +162,6 @@ pub fn run() {
             commands::open_accessibility_settings,
             commands::provider_catalog,
             commands::set_api_key,
-            commands::clear_api_key,
             commands::verify_provider,
             commands::local_status,
             commands::download_model,
@@ -197,7 +196,6 @@ pub fn run() {
             commands::suggest_export_name,
             commands::export_document,
             commands::copy_as_markdown,
-            commands::reveal_in_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Walkmark");

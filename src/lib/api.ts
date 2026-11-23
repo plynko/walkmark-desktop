@@ -59,8 +59,6 @@ export const openAccessibilitySettings = () => call<void>("open_accessibility_se
 export const providerCatalog = () => call<ProviderCatalog>("provider_catalog");
 export const setApiKey = (provider: ProviderId, key: string) =>
   call<void>("set_api_key", { provider, key });
-export const clearApiKey = (provider: ProviderId) =>
-  call<void>("clear_api_key", { provider });
 
 /**
  * Round-trips a trivial request. Anything left out falls back to what is
@@ -196,5 +194,3 @@ export const exportDocument = (options: ExportOptions, destination: string) =>
   call<ExportResult>("export_document", { options, destination });
 export const copyAsMarkdown = () => call<string>("copy_as_markdown");
 export const previewMarkdown = (text: string) => call<string>("preview_markdown", { text });
-export const revealInFolder = (path: string) =>
-  call<void>("reveal_in_folder", { path });

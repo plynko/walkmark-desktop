@@ -101,11 +101,6 @@ pub fn set_api_key(app: AppHandle, provider: String, key: String) -> Result<()> 
     storage::set_api_key(&app, provider_from(&provider)?, &key)
 }
 
-#[tauri::command]
-pub fn clear_api_key(app: AppHandle, provider: String) -> Result<()> {
-    storage::clear_api_key(&app, provider_from(&provider)?)
-}
-
 /// Round-trips a trivial request so Settings can confirm the setup works before
 /// the user commits to a long generation run.
 ///
@@ -991,17 +986,6 @@ pub fn copy_as_markdown(app: AppHandle, state: State<AppState>) -> Result<String
     Ok(out)
 }
 
-#[tauri::command]
-pub fn reveal_in_folder(path: String) -> Result<()> {
-    let path = std::path::PathBuf::from(&path);
-    let target = if path.is_file() {
-        path.parent().map(|p| p.to_path_buf()).unwrap_or(path)
-    } else {
-        path
-    };
-    open::that(&target)
-}
-
 /// Deep link into the macOS privacy pane, for the (common) case where the
 /// system prompt has already been dismissed once and won't reappear.
 #[tauri::command]
@@ -1039,36 +1023,5 @@ pub fn open_accessibility_settings(app: AppHandle) -> Result<()> {
     {
         let _ = app;
         Ok(())
-    }
-}
-
-mod open {
-    use crate::error::{AppError, Result};
-    use std::path::Path;
-    use std::process::Command;
-
-    pub fn that(path: &Path) -> Result<()> {
-        #[cfg(target_os = "macos")]
-        let mut cmd = {
-            let mut c = Command::new("open");
-            c.arg(path);
-            c
-        };
-        #[cfg(target_os = "windows")]
-        let mut cmd = {
-            let mut c = Command::new("explorer");
-            c.arg(path);
-            c
-        };
-        #[cfg(all(unix, not(target_os = "macos")))]
-        let mut cmd = {
-            let mut c = Command::new("xdg-open");
-            c.arg(path);
-            c
-        };
-
-        cmd.spawn()
-            .map(|_| ())
-            .map_err(|e| AppError::Other(format!("Could not open `{}`: {e}", path.display())))
     }
 }
