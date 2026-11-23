@@ -15,7 +15,7 @@ At the top of the document:
 | **Version, Author** | A line under the title, next to the export date. The date is filled in on the day you export; version (default 1.0) and author are yours to edit |
 | **Before you start** | Prerequisites — only shown when filled |
 
-The words around your text — the small heading above the title, “Before you start”, “Exported”, “Version” and “Author” — are the same for every guide in a language. They follow the guide's language and are set in **Settings → Writing → Wording in exports**.
+The words around your text — the small heading above the title, “Before you start”, “Exported”, “Version”, “Author”, “Steps”, “On this page”, “Step”, the step count and the credit line — are the same for every guide in a language. They follow the guide's language and are set in **Settings → Writing → Wording in exports**.
 
 AI fills these on write; edit them anytime.
 

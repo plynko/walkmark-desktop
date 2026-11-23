@@ -66,6 +66,12 @@ export interface DocumentLabels {
   exported: string;
   version: string;
   author: string;
+  steps: string;
+  onThisPage: string;
+  step: string;
+  stepOne: string;
+  stepMany: string;
+  generatedWith: string;
 }
 
 export interface Project {

@@ -174,9 +174,9 @@ test.describe("wording in Settings", () => {
     await heading.press("Enter");
 
     const [save] = (await app.calls("save_settings")).slice(-1);
-    expect((save.args.settings as any).labels).toEqual({
-      English: { guide: "", prerequisites: "Requirements", exported: "", version: "", author: "" },
-    });
+    const saved = (save.args.settings as any).labels.English;
+    expect(saved.prerequisites).toBe("Requirements");
+    expect(Object.entries(saved).filter(([, value]) => value).map(([key]) => key)).toEqual(["prerequisites"]);
     await expect(app.page.getByRole("button", { name: "Back to the built-in wording" })).toBeVisible();
   });
 
@@ -199,6 +199,20 @@ test.describe("wording in Settings", () => {
     expect((save.args.settings as any).labels).toEqual({});
   });
 
+  test("lists every fixed word an export prints", async ({ app }) => {
+    await openWriting(app.page);
+    for (const name of [
+      "Heading above the title",
+      "Steps heading",
+      "Contents heading",
+      "Step count, one",
+      "Step count, several",
+      "Credit line",
+    ]) {
+      await expect(app.page.getByRole("textbox", { name: `${name} in English` })).toBeVisible();
+    }
+  });
+
   test("a built-in language has no Translate button", async ({ app }) => {
     await openWriting(app.page);
     await expect(app.page.getByRole("button", { name: "Translate with AI" })).toHaveCount(0);
@@ -213,11 +227,14 @@ test.describe("wording in Settings", () => {
       await app.page.getByRole("button", { name: "Translate with AI" }).click();
 
       await expect(app.page.getByRole("textbox", { name: "Prerequisites heading in Lithuanian" })).toHaveValue(
-        "Prima di iniziare",
+        "Prieš pradedant",
+      );
+      await expect(app.page.getByRole("textbox", { name: "Credit line in Lithuanian" })).toHaveValue(
+        "Sukurta su Walkmark",
       );
       expect(await app.calls("translate_labels")).toHaveLength(1);
       const [save] = (await app.calls("save_settings")).slice(-1);
-      expect((save.args.settings as any).labels.Lithuanian.prerequisites).toBe("Prima di iniziare");
+      expect((save.args.settings as any).labels.Lithuanian.prerequisites).toBe("Prieš pradedant");
     });
 
     test("accepts wording typed by hand", async ({ app }) => {

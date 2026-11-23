@@ -121,38 +121,53 @@ pub fn outline_schema() -> serde_json::Value {
     })
 }
 
+/// What each label is used for, by its name in the JSON. `{english}` stands for
+/// the English wording.
+const LABEL_MEANINGS: &[(&str, &str)] = &[
+    ("guide", "is a small heading above the title of the guide."),
+    ("prerequisites", "is the heading of a list of things the reader needs first."),
+    ("exported", "comes directly before a date, as in \"{english} 2026-11-23\"."),
+    ("version", "comes directly before a version number, as in \"{english} 1.0\"."),
+    ("author", "comes directly before a person's name, as in \"{english} Erik\"."),
+    ("steps", "is the heading of a list of the step titles."),
+    ("onThisPage", "is the heading of a short table of contents on a web page."),
+    ("step", "comes directly before a step number, as in \"{english} 3\", and stands alone for an untitled step."),
+    ("stepOne", "is the lowercase singular noun after a count, as in \"1 {english}\"."),
+    ("stepMany", "is the lowercase plural noun after a count, as in \"5 {english}\"."),
+    ("generatedWith", "is a credit line at the bottom of the document. Keep the name Walkmark as it is."),
+];
+
 /// Asks for the wording a guide prints around its own text, in the guide's
 /// language. Text only: no screenshots are involved.
 pub fn labels_prompt(language: &str) -> String {
+    let english = serde_json::to_value(DocumentLabels::english()).unwrap_or_default();
+    let lines: Vec<String> = LABEL_MEANINGS
+        .iter()
+        .map(|(key, meaning)| {
+            let text = english[key].as_str().unwrap_or_default();
+            format!("- {key}: \"{text}\" {}", meaning.replace("{english}", text))
+        })
+        .collect();
     format!(
-        "Translate these five short labels from a how-to guide into {language}. \
+        "Translate these short labels from a how-to guide into {language}. \
 They are printed in a document, so use the wording a native technical writer would choose.\n\n\
-- guide: \"{guide}\" is a small heading above the title of the guide.\n\
-- prerequisites: \"{prerequisites}\" is the heading of a list of things the reader needs first.\n\
-- exported: \"{exported}\" comes directly before a date, as in \"{exported} 2026-11-23\".\n\
-- version: \"{version}\" comes directly before a version number, as in \"{version} 1.0\".\n\
-- author: \"{author}\" comes directly before a person's name, as in \"{author} Erik\".\n\n\
+{}\n\n\
 Keep each one short, with no trailing punctuation, and do not include the date, number or name.",
-        guide = DocumentLabels::GUIDE,
-        prerequisites = DocumentLabels::PREREQUISITES,
-        exported = DocumentLabels::EXPORTED,
-        version = DocumentLabels::VERSION,
-        author = DocumentLabels::AUTHOR,
+        lines.join("\n")
     )
 }
 
 pub fn labels_schema() -> serde_json::Value {
+    let keys: Vec<&str> = LABEL_MEANINGS.iter().map(|(key, _)| *key).collect();
+    let properties: serde_json::Map<String, serde_json::Value> = keys
+        .iter()
+        .map(|key| (key.to_string(), serde_json::json!({ "type": "string" })))
+        .collect();
     serde_json::json!({
         "type": "object",
-        "properties": {
-            "guide": { "type": "string" },
-            "prerequisites": { "type": "string" },
-            "exported": { "type": "string" },
-            "version": { "type": "string" },
-            "author": { "type": "string" }
-        },
-        "required": ["guide", "prerequisites", "exported", "version", "author"],
-        "propertyOrdering": ["guide", "prerequisites", "exported", "version", "author"]
+        "properties": properties,
+        "required": keys,
+        "propertyOrdering": keys
     })
 }
 
@@ -192,5 +207,27 @@ mod tests {
         let prompt = step_prompt(1, 2, "Configure a job", "Save the job", &[], None);
         assert!(prompt.contains("A working title for this step is \"Save the job\""));
         assert!(!prompt.contains("Revise the following author draft"));
+    }
+}
+
+#[cfg(test)]
+mod label_prompt_tests {
+    use super::*;
+
+    #[test]
+    fn every_label_is_described_and_asked_for() {
+        let english = serde_json::to_value(DocumentLabels::english()).unwrap();
+        let mut known: Vec<&str> = english.as_object().unwrap().keys().map(String::as_str).collect();
+        let mut described: Vec<&str> = LABEL_MEANINGS.iter().map(|(key, _)| *key).collect();
+        known.sort_unstable();
+        described.sort_unstable();
+        assert_eq!(known, described, "a label was added without saying what it is for");
+
+        let schema = labels_schema();
+        assert_eq!(schema["required"].as_array().unwrap().len(), known.len());
+        let prompt = labels_prompt("Italian");
+        assert!(prompt.contains("into Italian"));
+        assert!(prompt.contains("- stepMany: \"steps\""));
+        assert!(prompt.contains("as in \"Exported 2026-11-23\""));
     }
 }

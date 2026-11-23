@@ -318,117 +318,133 @@ fn default_document_version() -> String {
     "1.0".into()
 }
 
-/// Fixed wording that exports print around the guide's own text. They belong
-/// to a language, not to a guide, and live in Settings. An empty value falls
-/// back to the language's built-in wording, then to English.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", default)]
-pub struct DocumentLabels {
-    /// Small heading above the title.
-    pub guide: String,
-    /// Heading of the prerequisites list.
-    pub prerequisites: String,
-    /// Precedes the export date.
-    pub exported: String,
-    /// Precedes the version number.
-    pub version: String,
-    /// Precedes the author's name.
-    pub author: String,
+fn pick_text(mine: &str, theirs: &str) -> String {
+    let mine = mine.trim();
+    if mine.is_empty() {
+        theirs.trim().to_owned()
+    } else {
+        mine.to_owned()
+    }
+}
+
+/// Declares `DocumentLabels` once, so adding a label is one line here.
+macro_rules! document_labels {
+    ($($field:ident => $english:literal),+ $(,)?) => {
+        /// Fixed wording that exports print around the guide's own text. It
+        /// belongs to a language, not to a guide, and lives in Settings. An
+        /// empty value falls back to the language's built-in wording, then to
+        /// English.
+        #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+        #[serde(rename_all = "camelCase", default)]
+        pub struct DocumentLabels {
+            $(pub $field: String,)+
+        }
+
+        impl DocumentLabels {
+            /// The English wording, written out in full.
+            pub fn english() -> Self {
+                Self { $($field: $english.into(),)+ }
+            }
+
+            /// Builds labels from values in declaration order.
+            fn from_values(values: [&str; [$(stringify!($field)),+].len()]) -> Self {
+                let mut values = values.into_iter();
+                Self { $($field: values.next().unwrap_or_default().into(),)+ }
+            }
+
+            fn is_blank(&self) -> bool {
+                true $(&& self.$field.trim().is_empty())+
+            }
+
+            /// `self` where it says something, `base` where it does not.
+            fn over(&self, base: &Self) -> Self {
+                Self { $($field: pick_text(&self.$field, &base.$field),)+ }
+            }
+
+            /// Applies `f` to every label.
+            pub fn map(&self, f: impl Fn(&str) -> String) -> Self {
+                Self { $($field: f(&self.$field),)+ }
+            }
+
+            $(
+                pub fn $field(&self) -> &str {
+                    let text = self.$field.trim();
+                    if text.is_empty() { $english } else { text }
+                }
+            )+
+        }
+    };
+}
+
+document_labels! {
+    guide => "Step-by-step guide",
+    prerequisites => "Before you start",
+    exported => "Exported",
+    version => "Version",
+    author => "Author",
+    steps => "Steps",
+    on_this_page => "On this page",
+    step => "Step",
+    step_one => "step",
+    step_many => "steps",
+    generated_with => "Generated with Walkmark",
 }
 
 impl DocumentLabels {
-    pub const GUIDE: &'static str = "Step-by-step guide";
-    pub const PREREQUISITES: &'static str = "Before you start";
-    pub const EXPORTED: &'static str = "Exported";
-    pub const VERSION: &'static str = "Version";
-    pub const AUTHOR: &'static str = "Author";
-
-    fn pick<'a>(value: &'a str, default: &'a str) -> &'a str {
-        let value = value.trim();
-        if value.is_empty() {
-            default
-        } else {
-            value
-        }
-    }
-
-    /// The English wording, written out in full.
-    pub fn english() -> Self {
-        Self {
-            guide: Self::GUIDE.into(),
-            prerequisites: Self::PREREQUISITES.into(),
-            exported: Self::EXPORTED.into(),
-            version: Self::VERSION.into(),
-            author: Self::AUTHOR.into(),
-        }
-    }
-
     /// Wording that ships with Walkmark. Languages not listed here are
     /// translated by the user, or by the AI on request.
     pub fn built_in(language: &str) -> Option<Self> {
-        let words = |guide: &str, prerequisites: &str, exported: &str, version: &str, author: &str| {
-            Some(Self {
-                guide: guide.into(),
-                prerequisites: prerequisites.into(),
-                exported: exported.into(),
-                version: version.into(),
-                author: author.into(),
-            })
+        // Order: guide, prerequisites, exported, version, author, steps,
+        // on this page, step, step (one), steps (many), generated with.
+        let words = match language.trim().to_lowercase().as_str() {
+            "english" => return Some(Self::english()),
+            "italian" => ["Guida passo passo", "Prima di iniziare", "Esportato il", "Versione", "Autore", "Passaggi", "In questa pagina", "Passaggio", "passaggio", "passaggi", "Generato con Walkmark"],
+            "spanish" => ["Guía paso a paso", "Antes de empezar", "Exportado el", "Versión", "Autor", "Pasos", "En esta página", "Paso", "paso", "pasos", "Generado con Walkmark"],
+            "french" => ["Guide pas à pas", "Avant de commencer", "Exporté le", "Version", "Auteur", "Étapes", "Sur cette page", "Étape", "étape", "étapes", "Généré avec Walkmark"],
+            "german" => ["Schritt-für-Schritt-Anleitung", "Bevor Sie beginnen", "Exportiert am", "Version", "Autor", "Schritte", "Auf dieser Seite", "Schritt", "Schritt", "Schritte", "Erstellt mit Walkmark"],
+            "portuguese" => ["Guia passo a passo", "Antes de começar", "Exportado em", "Versão", "Autor", "Passos", "Nesta página", "Passo", "passo", "passos", "Gerado com Walkmark"],
+            "dutch" => ["Stapsgewijze handleiding", "Voordat je begint", "Geëxporteerd op", "Versie", "Auteur", "Stappen", "Op deze pagina", "Stap", "stap", "stappen", "Gemaakt met Walkmark"],
+            _ => return None,
         };
+        Some(Self::from_values(words))
+    }
+
+    /// "1 step", "3 steps".
+    pub fn step_count(&self, count: usize) -> String {
+        let word = if count == 1 { self.step_one() } else { self.step_many() };
+        format!("{count} {word}")
+    }
+
+    /// Language code for `<html lang>`, so readers and browsers treat the
+    /// document in the right language. Unknown languages fall back to English.
+    pub fn html_lang(language: &str) -> &'static str {
         match language.trim().to_lowercase().as_str() {
-            "english" => Some(Self::english()),
-            "italian" => words("Guida passo passo", "Prima di iniziare", "Esportato il", "Versione", "Autore"),
-            "spanish" => words("Guía paso a paso", "Antes de empezar", "Exportado el", "Versión", "Autor"),
-            "french" => words("Guide pas à pas", "Avant de commencer", "Exporté le", "Version", "Auteur"),
-            "german" => words("Schritt-für-Schritt-Anleitung", "Bevor Sie beginnen", "Exportiert am", "Version", "Autor"),
-            "portuguese" => words("Guia passo a passo", "Antes de começar", "Exportado em", "Versão", "Autor"),
-            "dutch" => words("Stapsgewijze handleiding", "Voordat je begint", "Geëxporteerd op", "Versie", "Auteur"),
-            _ => None,
+            "spanish" => "es",
+            "french" => "fr",
+            "german" => "de",
+            "portuguese" => "pt",
+            "italian" => "it",
+            "dutch" => "nl",
+            "polish" => "pl",
+            "russian" => "ru",
+            "ukrainian" => "uk",
+            "turkish" => "tr",
+            "arabic" => "ar",
+            "hindi" => "hi",
+            "japanese" => "ja",
+            "korean" => "ko",
+            "lithuanian" => "lt",
+            "swedish" => "sv",
+            "czech" => "cs",
+            "romanian" => "ro",
+            "vietnamese" => "vi",
+            "indonesian" => "id",
+            "greek" => "el",
+            "hebrew" => "he",
+            "chinese (simplified)" => "zh-Hans",
+            "chinese (traditional)" => "zh-Hant",
+            _ => "en",
         }
-    }
-
-    fn is_blank(&self) -> bool {
-        [&self.guide, &self.prerequisites, &self.exported, &self.version, &self.author]
-            .iter()
-            .all(|text| text.trim().is_empty())
-    }
-
-    /// `self` where it says something, `base` where it does not.
-    fn over(&self, base: &Self) -> Self {
-        let field = |mine: &str, theirs: &str| {
-            if mine.trim().is_empty() {
-                theirs.to_owned()
-            } else {
-                mine.trim().to_owned()
-            }
-        };
-        Self {
-            guide: field(&self.guide, &base.guide),
-            prerequisites: field(&self.prerequisites, &base.prerequisites),
-            exported: field(&self.exported, &base.exported),
-            version: field(&self.version, &base.version),
-            author: field(&self.author, &base.author),
-        }
-    }
-
-    pub fn guide(&self) -> &str {
-        Self::pick(&self.guide, Self::GUIDE)
-    }
-
-    pub fn prerequisites(&self) -> &str {
-        Self::pick(&self.prerequisites, Self::PREREQUISITES)
-    }
-
-    pub fn exported(&self) -> &str {
-        Self::pick(&self.exported, Self::EXPORTED)
-    }
-
-    pub fn version(&self) -> &str {
-        Self::pick(&self.version, Self::VERSION)
-    }
-
-    pub fn author(&self) -> &str {
-        Self::pick(&self.author, Self::AUTHOR)
     }
 }
 
@@ -928,16 +944,9 @@ impl Settings {
         let cleaned: BTreeMap<String, DocumentLabels> = std::mem::take(&mut self.labels)
             .into_iter()
             .map(|(language, labels)| {
-                let clean = |text: &str| clamp_trim(text, DOCUMENT_LABEL);
                 (
                     clamp_trim(&language, LANGUAGE),
-                    DocumentLabels {
-                        guide: clean(&labels.guide),
-                        prerequisites: clean(&labels.prerequisites),
-                        exported: clean(&labels.exported),
-                        version: clean(&labels.version),
-                        author: clean(&labels.author),
-                    },
+                    labels.map(|text| clamp_trim(text, DOCUMENT_LABEL)),
                 )
             })
             .filter(|(language, labels)| !language.is_empty() && !labels.is_blank())
@@ -1111,5 +1120,35 @@ mod label_tests {
         let loaded: Settings = serde_json::from_value(value).unwrap();
         assert!(loaded.labels.is_empty());
     }
-}
 
+    #[test]
+    fn every_built_in_language_fills_every_label() {
+        for language in ["English", "Italian", "Spanish", "French", "German", "Portuguese", "Dutch"] {
+            let labels = DocumentLabels::built_in(language).unwrap();
+            assert!(!labels.is_blank());
+            let json = serde_json::to_value(&labels).unwrap();
+            for (key, value) in json.as_object().unwrap() {
+                assert!(!value.as_str().unwrap().trim().is_empty(), "{language}: {key} is empty");
+            }
+        }
+    }
+
+    #[test]
+    fn built_in_words_land_in_the_right_fields() {
+        let italian = DocumentLabels::built_in("Italian").unwrap();
+        assert_eq!(italian.step_one, "passaggio");
+        assert_eq!(italian.step_many, "passaggi");
+        assert_eq!(italian.generated_with, "Generato con Walkmark");
+        assert_eq!(italian.step_count(1), "1 passaggio");
+        assert_eq!(italian.step_count(4), "4 passaggi");
+        let german = DocumentLabels::built_in("German").unwrap();
+        assert_eq!((german.steps.as_str(), german.step.as_str()), ("Schritte", "Schritt"));
+    }
+
+    #[test]
+    fn languages_map_to_html_codes() {
+        assert_eq!(DocumentLabels::html_lang("Italian"), "it");
+        assert_eq!(DocumentLabels::html_lang("Chinese (Simplified)"), "zh-Hans");
+        assert_eq!(DocumentLabels::html_lang("Klingon"), "en");
+    }
+}

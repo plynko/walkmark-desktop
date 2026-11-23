@@ -1,6 +1,6 @@
 use base64::Engine;
 use crate::guide_markdown::render as markdown;
-use crate::models::Project;
+use crate::models::{DocumentLabels, Project};
 
 use super::{ExportOptions, RenderedStep};
 
@@ -30,9 +30,8 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
         ));
     }
     body.push_str(&format!(
-        "<p class=\"meta\">{} step{}</p>\n</header>\n",
-        steps.len(),
-        if steps.len() == 1 { "" } else { "s" }
+        "<p class=\"meta\">{}</p>\n</header>\n",
+        esc(&options.labels.step_count(steps.len()))
     ));
 
     if options.include_prerequisites && !project.prerequisites.is_empty() {
@@ -64,7 +63,7 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
             body.push_str(&format!(
                 "<figure><img src=\"data:image/png;base64,{data}\" alt=\"{alt}\" \
                  width=\"{w}\" height=\"{h}\" loading=\"lazy\"></figure>\n",
-                alt = esc(&format!("Step {}: {}", step.number, step.title)),
+                alt = esc(&format!("{} {}: {}", options.labels.step(), step.number, step.title)),
                 w = image.width,
                 h = image.height
             ));
@@ -85,13 +84,17 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
                 )
             })
             .collect();
-        format!("<nav class=\"toc\" aria-label=\"Steps\"><p class=\"toc-title\">On this page</p><ol>{items}</ol></nav>")
+        format!(
+            "<nav class=\"toc\" aria-label=\"{steps}\"><p class=\"toc-title\">{title}</p><ol>{items}</ol></nav>",
+            steps = esc(options.labels.steps()),
+            title = esc(options.labels.on_this_page())
+        )
     } else {
         String::new()
     };
 
     format!(
-        "<!doctype html>\n<html lang=\"en\" data-theme=\"{theme}\">\n<head>\n\
+        "<!doctype html>\n<html lang=\"{lang}\" data-theme=\"{theme}\">\n<head>\n\
 <meta charset=\"utf-8\">\n\
 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
 <title>{title}</title>\n\
@@ -99,7 +102,9 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
 <meta name=\"generator\" content=\"Walkmark\">\n\
 <style>{css}</style>\n</head>\n<body>\n\
 <div class=\"layout{layout_mod}\">\n{toc}\n<main>\n{body}\n\
-<footer class=\"doc-foot\">Generated with Walkmark</footer>\n</main>\n</div>\n{script}\n</body>\n</html>\n",
+<footer class=\"doc-foot\">{generated}</footer>\n</main>\n</div>\n{script}\n</body>\n</html>\n",
+        lang = DocumentLabels::html_lang(&options.language),
+        generated = esc(options.labels.generated_with()),
         theme = esc(&options.theme),
         title = esc(&project.title),
         desc = esc(project.summary.trim()),
@@ -262,6 +267,48 @@ mod tests {
             "<p class=\"details\">Esportato il 2026-11-23 · Versione 1.0 · Autore Erik</p>"
         ));
         assert!(!html.contains("Before you start"));
+    }
+
+    #[test]
+    fn every_fixed_word_follows_the_language() {
+        let mut project = Project::new("Installazione", "");
+        project.language = "Italian".into();
+        let steps: Vec<RenderedStep> = (1..=3)
+            .map(|number| RenderedStep {
+                number,
+                title: format!("Passo {number}"),
+                body: String::new(),
+                image: Some(crate::export::RenderedImage {
+                    png: vec![0],
+                    width: 1,
+                    height: 1,
+                }),
+            })
+            .collect();
+        let options = ExportOptions {
+            labels: DocumentLabels::built_in("Italian").unwrap(),
+            language: "Italian".into(),
+            ..Default::default()
+        };
+
+        let html = render(&project, &steps, &options);
+        assert!(html.contains("<html lang=\"it\""));
+        assert!(html.contains("<p class=\"meta\">3 passaggi</p>"));
+        assert!(html.contains("aria-label=\"Passaggi\""));
+        assert!(html.contains("<p class=\"toc-title\">In questa pagina</p>"));
+        assert!(html.contains("alt=\"Passaggio 1: Passo 1\""));
+        assert!(html.contains("Generato con Walkmark"));
+        for english in ["On this page", "Generated with", "3 steps"] {
+            assert!(!html.contains(english), "{english} should be translated");
+        }
+    }
+
+    #[test]
+    fn a_single_step_uses_the_singular() {
+        let project = Project::new("Guide", "");
+        let html = render(&project, &steps(), &ExportOptions::default());
+        assert!(html.contains("<p class=\"meta\">1 step</p>"));
+        assert!(html.contains("<html lang=\"en\""));
     }
 
     #[test]

@@ -33,6 +33,9 @@ pub struct ExportOptions {
     /// Settings; ignored on input.
     #[serde(skip)]
     pub labels: DocumentLabels,
+    /// The guide's language, for `<html lang>`. Filled in by `write`.
+    #[serde(skip)]
+    pub language: String,
     /// HTML only. "light" | "dark" | "auto"
     pub theme: String,
 }
@@ -49,6 +52,7 @@ impl Default for ExportOptions {
             include_details: true,
             exported_on: String::new(),
             labels: DocumentLabels::default(),
+            language: String::new(),
             theme: "auto".into(),
         }
     }
@@ -77,6 +81,23 @@ pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<St
         parts.push(format!("{} {}", labels.author(), project.author.trim()));
     }
     parts
+}
+
+/// `options` plus what only the app knows: today's date, and the fixed wording
+/// for the guide's language from Settings.
+pub fn resolve_options(app: &AppHandle, project: &Project, options: &ExportOptions) -> ExportOptions {
+    let settings = app.state::<AppState>().settings.lock().clone();
+    let language = if project.language.trim().is_empty() {
+        settings.language.clone()
+    } else {
+        project.language.clone()
+    };
+    ExportOptions {
+        exported_on: chrono::Local::now().format("%Y-%m-%d").to_string(),
+        labels: settings.resolve_labels(&language).labels,
+        language,
+        ..options.clone()
+    }
 }
 
 pub(crate) const DETAIL_SEPARATOR: &str = " · ";
@@ -141,7 +162,7 @@ pub fn prepare(
         out.push(RenderedStep {
             number,
             title: if step.title.trim().is_empty() {
-                format!("Step {number}")
+                format!("{} {number}", options.labels.step())
             } else {
                 step.title.trim().to_string()
             },
@@ -164,19 +185,9 @@ pub fn write(
     options: &ExportOptions,
     destination: &Path,
 ) -> Result<ExportResult> {
-    let steps = prepare(app, project, options)?;
-    let mut options = options.clone();
-    options.exported_on = chrono::Local::now().format("%Y-%m-%d").to_string();
-    options.labels = {
-        let settings = app.state::<AppState>().settings.lock().clone();
-        let language = if project.language.trim().is_empty() {
-            settings.language.clone()
-        } else {
-            project.language.clone()
-        };
-        settings.resolve_labels(&language).labels
-    };
+    let options = resolve_options(app, project, options);
     let options = &options;
+    let steps = prepare(app, project, options)?;
     if let Some(parent) = destination.parent() {
         std::fs::create_dir_all(parent)?;
     }

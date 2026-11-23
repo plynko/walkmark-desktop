@@ -1,11 +1,15 @@
 # Changelog
 
+## 0.2.3 — 2026-11-23
+
+- Stop writing now interrupts requests that are already running, including the overview pass, and returns unfinished steps to how they were.
+- The fixed wording in exports now follows the guide's language: the heading above the title, “Before you start”, “Exported”, “Version” and “Author”, the step list and contents headings, “Step”, the step count and the credit line. Italian, Spanish, French, German, Portuguese and Dutch are built in; for any other language, translate it with AI or type your own in Settings → Writing. HTML exports also declare the right page language.
+- A line under the title shows the export date, an editable version number and the author. It can be turned off in the export options.
+- Removed unused commands and dependencies.
+
 ## 0.2.2 — 2026-11-23
 
 - Highlight an area with a semi-transparent Tint rectangle, or point at it with an Arrow. Both can be recoloured in the editor and are embedded in exported images.
-- Stop writing now interrupts requests that are already running, including the overview pass, and returns unfinished steps to how they were.
-- The fixed wording in exports — the heading above the title, “Before you start”, and the words “Exported”, “Version” and “Author” — now follows the guide's language. Italian, Spanish, French, German, Portuguese and Dutch are built in; for any other language, translate it with AI or type your own in Settings → Writing.
-- A line under the title shows the export date, an editable version number and the author. It can be turned off in the export options.
 - Projects now record the version of their file format, so future releases can open older guides safely.
 
 ## 0.2.1 — 2026-11-23

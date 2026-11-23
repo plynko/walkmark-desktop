@@ -179,6 +179,12 @@ function installTauriMock(language: string) {
           exported: "Exported",
           version: "Version",
           author: "Author",
+          steps: "Steps",
+          onThisPage: "On this page",
+          step: "Step",
+          stepOne: "step",
+          stepMany: "steps",
+          generatedWith: "Generated with Walkmark",
         };
         const italian = {
           guide: "Guida passo passo",
@@ -186,6 +192,12 @@ function installTauriMock(language: string) {
           exported: "Esportato il",
           version: "Versione",
           author: "Autore",
+          steps: "Passaggi",
+          onThisPage: "In questa pagina",
+          step: "Passaggio",
+          stepOne: "passaggio",
+          stepMany: "passaggi",
+          generatedWith: "Generato con Walkmark",
         };
         const name = String(args.language).trim().toLowerCase();
         const defaults = name === "italian" ? italian : english;
@@ -199,11 +211,17 @@ function installTauriMock(language: string) {
         return structuredClone(state.project);
       case "translate_labels":
         return {
-          guide: "Guida passo passo",
-          prerequisites: "Prima di iniziare",
-          exported: "Esportato il",
-          version: "Versione",
-          author: "Autore",
+          guide: "Pamoka žingsnis po žingsnio",
+          prerequisites: "Prieš pradedant",
+          exported: "Eksportuota",
+          version: "Versija",
+          author: "Autorius",
+          steps: "Žingsniai",
+          onThisPage: "Šiame puslapyje",
+          step: "Žingsnis",
+          stepOne: "žingsnis",
+          stepMany: "žingsniai",
+          generatedWith: "Sukurta su Walkmark",
         };
       case "update_step": {
         const step = state.project.steps.find((s) => s.id === args.id)!;

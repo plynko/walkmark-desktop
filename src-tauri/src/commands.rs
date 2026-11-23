@@ -1009,10 +1009,14 @@ pub fn copy_as_markdown(app: AppHandle, state: State<AppState>) -> Result<String
         .clone()
         .ok_or_else(|| AppError::NotFound("No document is open.".into()))?;
 
-    let options = ExportOptions {
-        include_images: false,
-        ..Default::default()
-    };
+    let options = export::resolve_options(
+        &app,
+        &project,
+        &ExportOptions {
+            include_images: false,
+            ..Default::default()
+        },
+    );
     let steps = export::prepare(&app, &project, &options)?;
 
     let mut out = format!("# {}\n\n", project.title.trim());

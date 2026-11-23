@@ -413,14 +413,7 @@ pub async fn translate_labels(
     let settings: Settings = app.state::<AppState>().settings.lock().clone();
     let client = client_for_overrides(app, &settings, overrides)?;
     let translated = client.translate_labels(&language).await?;
-    let clean = |text: String| crate::limits::clamp_trim(&text, crate::limits::DOCUMENT_LABEL);
-    Ok(DocumentLabels {
-        guide: clean(translated.guide),
-        prerequisites: clean(translated.prerequisites),
-        exported: clean(translated.exported),
-        version: clean(translated.version),
-        author: clean(translated.author),
-    })
+    Ok(translated.map(|text| crate::limits::clamp_trim(text, crate::limits::DOCUMENT_LABEL)))
 }
 
 /// Resolves once the run has been asked to stop.

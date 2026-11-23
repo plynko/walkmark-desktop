@@ -11,13 +11,37 @@
 	const language = $derived(store.settings.language.trim() || 'English');
 	const saved = $derived(store.settings.labels ?? {});
 
-	const FIELDS: { key: keyof DocumentLabels; label: string; hint: string }[] = [
-		{ key: 'guide', label: 'Heading above the title', hint: 'Small line over the guide’s title.' },
-		{ key: 'prerequisites', label: 'Prerequisites heading', hint: 'Heads the list of what the reader needs first.' },
-		{ key: 'exported', label: 'Export date', hint: 'Comes before the date, e.g. “Exported 2026-11-23”.' },
-		{ key: 'version', label: 'Version', hint: 'Comes before the version number.' },
-		{ key: 'author', label: 'Author', hint: 'Comes before the author’s name.' }
+	type Field = { key: keyof DocumentLabels; label: string; hint: string };
+
+	const GROUPS: { title: string; fields: Field[] }[] = [
+		{
+			title: 'Top of the guide',
+			fields: [
+				{ key: 'guide', label: 'Heading above the title', hint: 'Small line over the guide’s title.' },
+				{ key: 'prerequisites', label: 'Prerequisites heading', hint: 'Heads the list of what the reader needs first.' },
+				{ key: 'exported', label: 'Before the export date', hint: 'Comes before the date, e.g. “Exported 2026-11-23”.' },
+				{ key: 'version', label: 'Before the version', hint: 'Comes before the version number.' },
+				{ key: 'author', label: 'Before the author', hint: 'Comes before the author’s name.' }
+			]
+		},
+		{
+			title: 'Steps and contents',
+			fields: [
+				{ key: 'steps', label: 'Steps heading', hint: 'Heads the list of step titles (Markdown contents).' },
+				{ key: 'onThisPage', label: 'Contents heading', hint: 'Heads the table of contents in HTML.' },
+				{ key: 'step', label: 'Step', hint: 'Before a step number, and for a step with no title: “Step 3”.' },
+				{ key: 'stepOne', label: 'Step count, one', hint: 'After a count of one: “1 step”.' },
+				{ key: 'stepMany', label: 'Step count, several', hint: 'After a larger count: “5 steps”.' }
+			]
+		},
+		{
+			title: 'Bottom of the guide',
+			fields: [
+				{ key: 'generatedWith', label: 'Credit line', hint: 'Last line of HTML and Markdown. Keep the name Walkmark.' }
+			]
+		}
 	];
+	const FIELDS: Field[] = GROUPS.flatMap((group) => group.fields);
 
 	let info = $state<ResolvedLabels | null>(null);
 	let translating = $state(false);
@@ -111,21 +135,26 @@
 			{/if}
 		</div>
 
-		<div class="space-y-2.5">
-			{#each FIELDS as field (field.key)}
-				<div class="space-y-1">
-					<Label class="text-xs font-medium text-(--text)/72">{field.label}</Label>
-					<Input
-						value={info.labels[field.key]}
-						maxlength={LIMITS.documentLabel}
-						placeholder={info.defaults[field.key]}
-						aria-label="{field.label} in {language}"
-						data-tooltip={field.hint}
-						onchange={(e) => commit(field.key, (e.currentTarget as HTMLInputElement).value)}
-						onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-					/>
-				</div>
-			{/each}
-		</div>
+		{#each GROUPS as group (group.title)}
+			<div class="space-y-2.5">
+				<p class="pt-1 text-[11.5px] font-semibold tracking-wider text-(--text)/40 uppercase">
+					{group.title}
+				</p>
+				{#each group.fields as field (field.key)}
+					<div class="space-y-1">
+						<Label class="text-xs font-medium text-(--text)/72">{field.label}</Label>
+						<Input
+							value={info.labels[field.key]}
+							maxlength={LIMITS.documentLabel}
+							placeholder={info.defaults[field.key]}
+							aria-label="{field.label} in {language}"
+							data-tooltip={field.hint}
+							onchange={(e) => commit(field.key, (e.currentTarget as HTMLInputElement).value)}
+							onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+						/>
+					</div>
+				{/each}
+			</div>
+		{/each}
 	{/if}
 </div>

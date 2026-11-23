@@ -19,7 +19,13 @@
 		prerequisites: 'Before you start',
 		exported: 'Exported',
 		version: 'Version',
-		author: 'Author'
+		author: 'Author',
+		steps: 'Steps',
+		onThisPage: 'On this page',
+		step: 'Step',
+		stepOne: 'step',
+		stepMany: 'steps',
+		generatedWith: 'Generated with Walkmark'
 	};
 
 	const project = $derived(store.project!);
