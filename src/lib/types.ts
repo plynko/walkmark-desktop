@@ -60,6 +60,8 @@ export interface Step {
 }
 
 export interface Project {
+  /** Layout version of project.json; absent in projects saved before 0.2.2. */
+  schemaVersion?: number;
   id: string;
   title: string;
   summary: string;

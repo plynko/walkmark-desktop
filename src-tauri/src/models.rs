@@ -314,9 +314,19 @@ pub struct DeletedStep {
     pub step: Step,
 }
 
+/// Version of the `project.json` layout. Projects written before the field
+/// existed read back as version 1.
+pub const PROJECT_SCHEMA_VERSION: u32 = 1;
+
+fn default_schema_version() -> u32 {
+    PROJECT_SCHEMA_VERSION
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
+    #[serde(default = "default_schema_version")]
+    pub schema_version: u32,
     pub id: String,
     pub title: String,
     #[serde(default)]
@@ -342,6 +352,7 @@ pub struct Project {
 impl Project {
     pub fn new(title: impl Into<String>, source_label: impl Into<String>) -> Self {
         Self {
+            schema_version: PROJECT_SCHEMA_VERSION,
             id: new_id(),
             title: title.into(),
             summary: String::new(),
@@ -417,6 +428,17 @@ impl Project {
 #[cfg(test)]
 mod project_step_tests {
     use super::*;
+
+    #[test]
+    fn projects_without_a_schema_version_read_as_version_one() {
+        let project = Project::new("Guide", "Window");
+        let mut value = serde_json::to_value(&project).unwrap();
+        assert_eq!(value["schemaVersion"], PROJECT_SCHEMA_VERSION);
+
+        value.as_object_mut().unwrap().remove("schemaVersion");
+        let loaded: Project = serde_json::from_value(value).unwrap();
+        assert_eq!(loaded.schema_version, 1);
+    }
 
     #[test]
     fn inserts_a_manual_draft_after_the_anchor_or_at_the_end() {
