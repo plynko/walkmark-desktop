@@ -3,7 +3,7 @@
 //! Run with:
 //!   RUN_LIVE_TESTS=1 cargo test --manifest-path src-tauri/Cargo.toml --test live_mistral -- --nocapture
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use walkmark_lib::probe::{self, provider, Provider};
 
@@ -34,7 +34,7 @@ fn sample_frame() -> Option<PathBuf> {
     })
 }
 
-fn prepare(path: &PathBuf) -> provider::InlineImage {
+fn prepare(path: &Path) -> provider::InlineImage {
     let image = probe::load(path).expect("load frame");
     let image = probe::fit_width(image, 1280);
     provider::InlineImage(probe::encode_jpeg(&image, 82).expect("encode jpeg"))

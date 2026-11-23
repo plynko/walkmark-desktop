@@ -384,50 +384,6 @@ fn apply_written_step(step: &mut Step, source: (String, String), text: provider:
     step.error = None;
 }
 
-#[cfg(test)]
-mod step_polish_tests {
-    use super::*;
-
-    #[test]
-    fn polishing_keeps_locked_steps_and_does_not_clear_an_empty_response_field() {
-        let mut step = Step::new("frame.png".into(), 0, true);
-        step.title = "Job settings".into();
-        step.body = "Use Q4-EMEA and leave retries off.".into();
-        step.locked = true;
-        let source = (step.title.clone(), step.body.clone());
-
-        apply_written_step(
-            &mut step,
-            source,
-            provider::StepText {
-                title: "Configure the job.".into(),
-                body: String::new(),
-            },
-        );
-        assert_eq!(step.title, "Configure the job");
-        assert_eq!(step.body, "Use Q4-EMEA and leave retries off.");
-        assert!(step.locked);
-    }
-
-    #[test]
-    fn an_ai_response_does_not_overwrite_more_recent_edits() {
-        let mut step = Step::new("frame.png".into(), 0, true);
-        step.title = "Configure the job".into();
-        let source = (step.title.clone(), step.body.clone());
-        step.body = "New note: keep retries off.".into();
-        apply_written_step(
-            &mut step,
-            source,
-            provider::StepText {
-                title: "Configure retries".into(),
-                body: "Enable retries.".into(),
-            },
-        );
-        assert_eq!(step.title, "Configure the job");
-        assert_eq!(step.body, "New note: keep retries off.");
-    }
-}
-
 fn select_targets(project: &Project, scope: &Scope) -> Vec<String> {
     match scope {
         Scope::Only(ids) => project
@@ -566,4 +522,48 @@ fn emit_done(app: &AppHandle, cancelled: bool, succeeded: usize, failed: usize) 
             failed,
         },
     );
+}
+
+#[cfg(test)]
+mod step_polish_tests {
+    use super::*;
+
+    #[test]
+    fn polishing_keeps_locked_steps_and_does_not_clear_an_empty_response_field() {
+        let mut step = Step::new("frame.png".into(), 0, true);
+        step.title = "Job settings".into();
+        step.body = "Use Q4-EMEA and leave retries off.".into();
+        step.locked = true;
+        let source = (step.title.clone(), step.body.clone());
+
+        apply_written_step(
+            &mut step,
+            source,
+            provider::StepText {
+                title: "Configure the job.".into(),
+                body: String::new(),
+            },
+        );
+        assert_eq!(step.title, "Configure the job");
+        assert_eq!(step.body, "Use Q4-EMEA and leave retries off.");
+        assert!(step.locked);
+    }
+
+    #[test]
+    fn an_ai_response_does_not_overwrite_more_recent_edits() {
+        let mut step = Step::new("frame.png".into(), 0, true);
+        step.title = "Configure the job".into();
+        let source = (step.title.clone(), step.body.clone());
+        step.body = "New note: keep retries off.".into();
+        apply_written_step(
+            &mut step,
+            source,
+            provider::StepText {
+                title: "Configure retries".into(),
+                body: "Enable retries.".into(),
+            },
+        );
+        assert_eq!(step.title, "Configure the job");
+        assert_eq!(step.body, "New note: keep retries off.");
+    }
 }

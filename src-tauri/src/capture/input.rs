@@ -164,11 +164,7 @@ fn event_triggers_step(event: &Event) -> bool {
             EventType::Wheel { delta_x, delta_y } => delta_x != 0 || delta_y != 0,
             EventType::KeyPress(key) => {
                 mods.on_press(key);
-                if mods.is_walkmark_shortcut(key) || is_modifier(key) {
-                    false
-                } else {
-                    true
-                }
+                !(mods.is_walkmark_shortcut(key) || is_modifier(key))
             }
             EventType::KeyRelease(key) => {
                 mods.on_release(key);

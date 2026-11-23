@@ -301,7 +301,6 @@ pub fn start_recording(
         },
     )?;
 
-    let mut project = project;
     project.source_label = session.source_label.clone();
     storage::save_project(&app, &project)?;
 
