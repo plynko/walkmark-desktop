@@ -213,7 +213,9 @@ mod tests {
         );
 
         let compatible = body("local-model", &ask(), Flavor::Compatible);
-        assert!(compatible["response_format"]["json_schema"].get("strict").is_none());
+        assert!(compatible["response_format"]["json_schema"]
+            .get("strict")
+            .is_none());
     }
 
     #[test]

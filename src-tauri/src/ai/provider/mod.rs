@@ -98,7 +98,10 @@ impl Client {
                 .trim_end_matches('/')
                 .to_string();
             if raw.is_empty() {
-                provider.default_base_url().trim_end_matches('/').to_string()
+                provider
+                    .default_base_url()
+                    .trim_end_matches('/')
+                    .to_string()
             } else {
                 raw.to_string()
             }
@@ -151,7 +154,8 @@ impl Client {
             Provider::OpenAi | Provider::Mistral | Provider::OpenRouter => {
                 self.check_get(&openai::models_url(&self.base_url)).await
             }
-            Provider::Compatible => match self.check_get(&openai::models_url(&self.base_url)).await {
+            Provider::Compatible => match self.check_get(&openai::models_url(&self.base_url)).await
+            {
                 Ok(()) => Ok(()),
                 Err(_) => self.check_chat().await,
             },
@@ -216,10 +220,7 @@ impl Client {
     }
 
     /// Translates the guide's fixed labels. Text only, so any model can do it.
-    pub async fn translate_labels(
-        &self,
-        language: &str,
-    ) -> Result<crate::models::DocumentLabels> {
+    pub async fn translate_labels(&self, language: &str) -> Result<crate::models::DocumentLabels> {
         let prompt = super::prompt::labels_prompt(language);
         self.ask(&Ask {
             system: "You translate short interface labels for documentation.",
@@ -355,7 +356,9 @@ not have access to it.",
             Provider::Gemini => gemini::url(&self.base_url, &self.model),
             Provider::Anthropic => anthropic::url(&self.base_url),
             Provider::Ollama => ollama::url(&self.base_url),
-            Provider::OpenAi | Provider::OpenRouter | Provider::Mistral | Provider::Compatible => openai::url(&self.base_url),
+            Provider::OpenAi | Provider::OpenRouter | Provider::Mistral | Provider::Compatible => {
+                openai::url(&self.base_url)
+            }
         }
     }
 
@@ -406,7 +409,8 @@ not have access to it.",
             if let Some(text) = message.as_str() {
                 return Some(text.to_owned());
             }
-            if let Some(formatted) = format_validation_errors(message.get("detail").unwrap_or(message))
+            if let Some(formatted) =
+                format_validation_errors(message.get("detail").unwrap_or(message))
             {
                 return Some(formatted);
             }
@@ -467,7 +471,10 @@ fn is_loopback(base_url: &str) -> bool {
         .next()
         .unwrap_or_default();
     let host = host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host);
-    matches!(host, "localhost" | "127.0.0.1" | "0.0.0.0" | "[::1]" | "::1")
+    matches!(
+        host,
+        "localhost" | "127.0.0.1" | "0.0.0.0" | "[::1]" | "::1"
+    )
 }
 
 /// Models sometimes wrap JSON in a ```json fence or add a sentence around it,
@@ -577,7 +584,8 @@ mod tests {
     #[test]
     fn parses_json_with_a_chatty_preamble() {
         let value: StepText =
-            parse_json("Sure! Here you go:\n{\"title\":\"Save\",\"body\":\"Click Save.\"}").unwrap();
+            parse_json("Sure! Here you go:\n{\"title\":\"Save\",\"body\":\"Click Save.\"}")
+                .unwrap();
         assert_eq!(value.body, "Click Save.");
     }
 
@@ -613,7 +621,10 @@ mod tests {
         )
         .unwrap();
         let message = client.error_message(payload).unwrap();
-        assert!(message.contains("Extra inputs are not permitted"), "{message}");
+        assert!(
+            message.contains("Extra inputs are not permitted"),
+            "{message}"
+        );
         assert!(message.contains("temperature"), "{message}");
     }
 

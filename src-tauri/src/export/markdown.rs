@@ -61,11 +61,7 @@ pub fn write(
     }
 
     for step in steps {
-        doc.push_str(&format!(
-            "## {}. {}\n\n",
-            step.number,
-            escape(&step.title)
-        ));
+        doc.push_str(&format!("## {}. {}\n\n", step.number, escape(&step.title)));
 
         if !step.body.is_empty() {
             doc.push_str(&step.body);
@@ -137,4 +133,3 @@ mod tests {
         assert!(!text.contains("Generated with"));
     }
 }
-

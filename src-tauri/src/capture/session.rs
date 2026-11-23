@@ -158,12 +158,7 @@ impl Drop for Session {
     }
 }
 
-fn run(
-    app: AppHandle,
-    cfg: SessionConfig,
-    ctl: Arc<Control>,
-    ready: mpsc::Sender<Result<String>>,
-) {
+fn run(app: AppHandle, cfg: SessionConfig, ctl: Arc<Control>, ready: mpsc::Sender<Result<String>>) {
     let target = match super::resolve(&cfg.source_id) {
         Ok(t) => t,
         Err(e) => {
@@ -312,7 +307,8 @@ Settings, or turn on visual fallback in Recording settings."
         // The frame right after a commit is kept as an alternate so the user can
         // fix a screenshot taken a beat too early.
         if let Some(step_id) = pending_alternate.take() {
-            if let Ok(name) = write_frame(&cfg.frames_dir, &frame, now.as_millis() as u64, s.max_width)
+            if let Ok(name) =
+                write_frame(&cfg.frames_dir, &frame, now.as_millis() as u64, s.max_width)
             {
                 let _ = app.emit(
                     EVT_ALTERNATE,
@@ -349,8 +345,7 @@ Settings, or turn on visual fallback in Recording settings."
             0
         };
         let waited_long_enough = settle_waits >= MAX_SETTLE_WAITS;
-        let visual_commit =
-            use_visual && changed && gap_ok && (settled || waited_long_enough);
+        let visual_commit = use_visual && changed && gap_ok && (settled || waited_long_enough);
         let input_commit = use_input && input_ready && gap_ok;
         let first_sample = committed_sig.is_none();
 
@@ -468,12 +463,7 @@ fn emit_tick(app: &AppHandle, ctl: &Control, tick: RecordingTick) {
 /// Frame names lead with the offset so a plain directory listing is in
 /// chronological order, and end with a random suffix to avoid collisions when
 /// two frames land in the same millisecond.
-fn write_frame(
-    dir: &Path,
-    image: &RgbaImage,
-    offset_ms: u64,
-    max_width: u32,
-) -> Result<String> {
+fn write_frame(dir: &Path, image: &RgbaImage, offset_ms: u64, max_width: u32) -> Result<String> {
     let name = format!(
         "{:09}-{}.png",
         offset_ms,

@@ -468,7 +468,10 @@ mod tests {
             if models.is_empty() {
                 continue;
             }
-            let count = models.iter().filter(|m| m.tier == Tier::Recommended).count();
+            let count = models
+                .iter()
+                .filter(|m| m.tier == Tier::Recommended)
+                .count();
             assert_eq!(count, 1, "{} has {count} recommended models", provider.id());
         }
     }

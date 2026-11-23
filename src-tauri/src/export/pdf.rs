@@ -213,8 +213,9 @@ pub fn render(
 
             writer.ensure(draw_h);
             let id = doc.add_image(
-                &RawImage::decode_from_bytes(&image.png, &mut warnings)
-                    .map_err(|e| AppError::Other(format!("A screenshot could not be embedded: {e}")))?,
+                &RawImage::decode_from_bytes(&image.png, &mut warnings).map_err(|e| {
+                    AppError::Other(format!("A screenshot could not be embedded: {e}"))
+                })?,
             );
             writer.image(id, x, writer.y - draw_h, draw_w, draw_h, image.width);
             writer.y -= draw_h;
@@ -438,7 +439,13 @@ impl Writer {
                 self.gap(line_height * 0.5);
                 continue;
             }
-            for line in wrap(self.metrics(style.bold), paragraph, style.size, style.tracking, width) {
+            for line in wrap(
+                self.metrics(style.bold),
+                paragraph,
+                style.size,
+                style.tracking,
+                width,
+            ) {
                 self.ensure(line_height);
                 self.y -= line_height;
                 // Baseline sits a little above the bottom of the line box.
@@ -535,7 +542,10 @@ fn footer_ops(
 
     let mut ops = Vec::new();
     for (text, x) in [
-        (truncate(title, metrics, size, CONTENT_W - right_w - 20.0), MARGIN_X),
+        (
+            truncate(title, metrics, size, CONTENT_W - right_w - 20.0),
+            MARGIN_X,
+        ),
         (right, MARGIN_X + CONTENT_W - right_w),
     ] {
         ops.push(Op::StartTextSection);
@@ -545,10 +555,7 @@ fn footer_ops(
             size: Pt(size),
         });
         ops.push(Op::SetTextCursor {
-            pos: Point {
-                x: Pt(x),
-                y: Pt(y),
-            },
+            pos: Point { x: Pt(x), y: Pt(y) },
         });
         ops.push(Op::ShowText {
             items: vec![TextItem::Text(text)],
@@ -574,13 +581,7 @@ fn truncate(text: &str, metrics: &FontMetricsRef, size: f32, max: f32) -> String
 
 /// Greedy word wrap. Words longer than the line (a URL, a long identifier) are
 /// broken mid-word rather than overflowing the margin.
-fn wrap(
-    metrics: &FontMetricsRef,
-    text: &str,
-    size: f32,
-    tracking: f32,
-    width: f32,
-) -> Vec<String> {
+fn wrap(metrics: &FontMetricsRef, text: &str, size: f32, tracking: f32, width: f32) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current = String::new();
 
@@ -635,7 +636,10 @@ mod tests {
         let m = metrics();
         let text = "Open the Settings panel and choose the Billing tab to review your plan.";
         for line in wrap(&m, text, 10.5, 0.0, 200.0) {
-            assert!(m.measure(&line, 10.5, 0.0) <= 200.0, "overflowing line: {line}");
+            assert!(
+                m.measure(&line, 10.5, 0.0) <= 200.0,
+                "overflowing line: {line}"
+            );
         }
     }
 
@@ -695,6 +699,8 @@ mod tests {
             exported_on: "2026-11-23".into(),
             ..Default::default()
         };
-        assert!(render(&project, &steps, &options).unwrap().starts_with(b"%PDF"));
+        assert!(render(&project, &steps, &options)
+            .unwrap()
+            .starts_with(b"%PDF"));
     }
 }

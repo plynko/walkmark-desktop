@@ -6,7 +6,10 @@
 use std::time::Instant;
 
 fn main() {
-    println!("permission granted: {}", walkmark_lib::probe::has_permission());
+    println!(
+        "permission granted: {}",
+        walkmark_lib::probe::has_permission()
+    );
 
     let started = Instant::now();
     match walkmark_lib::probe::list_sources(false) {

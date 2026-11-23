@@ -13,8 +13,7 @@ use walkmark_lib::probe::{
 fn projects_dir() -> PathBuf {
     let home = std::env::var("HOME").expect("HOME");
     if cfg!(target_os = "macos") {
-        Path::new(&home)
-            .join("Library/Application Support/app.walkmark.desktop/projects")
+        Path::new(&home).join("Library/Application Support/app.walkmark.desktop/projects")
     } else {
         Path::new(&home).join(".local/share/app.walkmark.desktop/projects")
     }
@@ -57,12 +56,16 @@ fn main() {
     }
     println!("{} steps from `{}`", steps.len(), project.title);
 
-    for format in [ExportFormat::Markdown, ExportFormat::Html, ExportFormat::Pdf] {
+    for format in [
+        ExportFormat::Markdown,
+        ExportFormat::Html,
+        ExportFormat::Pdf,
+    ] {
         let path = out.join(format!("guide.{}", format.extension()));
         let bytes = match format {
             ExportFormat::Markdown => {
-                let assets = markdown::write(&project, &steps, &options, &path)
-                    .expect("write markdown");
+                let assets =
+                    markdown::write(&project, &steps, &options, &path).expect("write markdown");
                 println!("  assets → {}", assets.display());
                 std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0)
             }
@@ -77,6 +80,11 @@ fn main() {
                 doc.len() as u64
             }
         };
-        println!("{} → {} ({} KB)", format.extension(), path.display(), bytes / 1024);
+        println!(
+            "{} → {} ({} KB)",
+            format.extension(),
+            path.display(),
+            bytes / 1024
+        );
     }
 }

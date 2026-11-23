@@ -157,7 +157,9 @@ fn gemini_sends_its_key_as_a_header_and_reads_the_candidate_back() {
 
     let request = &stub.requests()[0];
     assert_eq!(request.header("x-goog-api-key"), Some("test-key"));
-    assert!(request.path.ends_with("/models/gemini-3.6-flash:generateContent"));
+    assert!(request
+        .path
+        .ends_with("/models/gemini-3.6-flash:generateContent"));
     assert!(request.body["contents"][0]["parts"][1]["inlineData"]["data"].is_string());
 }
 
@@ -185,7 +187,10 @@ fn openai_sends_a_bearer_token_and_reads_the_choice_back() {
     let request = &stub.requests()[0];
     assert_eq!(request.header("authorization"), Some("Bearer sk-test"));
     assert_eq!(request.path, "/v1/chat/completions");
-    assert_eq!(request.body["response_format"]["json_schema"]["strict"], true);
+    assert_eq!(
+        request.body["response_format"]["json_schema"]["strict"],
+        true
+    );
 }
 
 #[test]
@@ -269,7 +274,13 @@ fn ollama_needs_no_key_and_reads_the_message_back() {
     let request = &stub.requests()[0];
     assert_eq!(request.path, "/api/chat");
     assert!(request.header("authorization").is_none());
-    assert_eq!(request.body["messages"][1]["images"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        request.body["messages"][1]["images"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[test]
@@ -528,7 +539,11 @@ fn status_reports_installed_models_and_whether_they_can_see() {
             } else {
                 r#"["completion"]"#
             };
-            reply(stream, 200, &format!(r#"{{"capabilities":{capabilities}}}"#))
+            reply(
+                stream,
+                200,
+                &format!(r#"{{"capabilities":{capabilities}}}"#),
+            )
         }
         _ => reply(stream, 404, "{}"),
     });
@@ -538,7 +553,11 @@ fn status_reports_installed_models_and_whether_they_can_see() {
     assert_eq!(status.version.as_deref(), Some("0.6.2"));
     assert_eq!(status.models.len(), 2);
 
-    let vision = status.models.iter().find(|m| m.id == "qwen3-vl:8b").unwrap();
+    let vision = status
+        .models
+        .iter()
+        .find(|m| m.id == "qwen3-vl:8b")
+        .unwrap();
     assert!(vision.vision);
     assert_eq!(vision.parameters, "8.3B");
 

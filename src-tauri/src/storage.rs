@@ -323,10 +323,7 @@ pub fn get_api_key(app: &AppHandle, provider: Provider) -> Option<String> {
 }
 
 pub fn clear_api_key(app: &AppHandle, provider: Provider) -> Result<()> {
-    key_cache()
-        .lock()
-        .expect("api key cache")
-        .remove(&provider);
+    key_cache().lock().expect("api key cache").remove(&provider);
     if let Ok(entry) = keyring::Entry::new(KEYRING_SERVICE, provider.id()) {
         let _ = entry.delete_credential();
     }
@@ -477,7 +474,10 @@ mod tests {
         }));
 
         assert_eq!(settings.provider, Provider::Gemini);
-        assert_eq!(settings.config_for(settings.provider).model, "gemini-3.5-flash-lite");
+        assert_eq!(
+            settings.config_for(settings.provider).model,
+            "gemini-3.5-flash-lite"
+        );
         assert!(settings.onboarded);
         assert_eq!(settings.concurrency, 3);
     }
@@ -498,7 +498,10 @@ mod tests {
             "onboarded": true
         }));
 
-        assert_eq!(settings.config_for(settings.provider).model, "gemini-3.5-flash-lite");
+        assert_eq!(
+            settings.config_for(settings.provider).model,
+            "gemini-3.5-flash-lite"
+        );
     }
 
     #[test]
@@ -525,7 +528,10 @@ mod tests {
     #[test]
     fn an_unconfigured_provider_falls_back_to_the_catalog_default() {
         let settings = Settings::default();
-        assert_eq!(settings.config_for(settings.provider).model, "gemini-3.6-flash");
+        assert_eq!(
+            settings.config_for(settings.provider).model,
+            "gemini-3.6-flash"
+        );
         assert_eq!(
             settings.config_for(Provider::Anthropic).model,
             "claude-sonnet-5"

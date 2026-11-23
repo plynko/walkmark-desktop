@@ -398,12 +398,84 @@ impl DocumentLabels {
         // on this page, step, step (one), steps (many), generated with.
         let words = match language.trim().to_lowercase().as_str() {
             "english" => return Some(Self::english()),
-            "italian" => ["Guida passo passo", "Prima di iniziare", "Esportato il", "Versione", "Autore", "Passaggi", "In questa pagina", "Passaggio", "passaggio", "passaggi", "Generato con Walkmark"],
-            "spanish" => ["Guía paso a paso", "Antes de empezar", "Exportado el", "Versión", "Autor", "Pasos", "En esta página", "Paso", "paso", "pasos", "Generado con Walkmark"],
-            "french" => ["Guide pas à pas", "Avant de commencer", "Exporté le", "Version", "Auteur", "Étapes", "Sur cette page", "Étape", "étape", "étapes", "Généré avec Walkmark"],
-            "german" => ["Schritt-für-Schritt-Anleitung", "Bevor Sie beginnen", "Exportiert am", "Version", "Autor", "Schritte", "Auf dieser Seite", "Schritt", "Schritt", "Schritte", "Erstellt mit Walkmark"],
-            "portuguese" => ["Guia passo a passo", "Antes de começar", "Exportado em", "Versão", "Autor", "Passos", "Nesta página", "Passo", "passo", "passos", "Gerado com Walkmark"],
-            "dutch" => ["Stapsgewijze handleiding", "Voordat je begint", "Geëxporteerd op", "Versie", "Auteur", "Stappen", "Op deze pagina", "Stap", "stap", "stappen", "Gemaakt met Walkmark"],
+            "italian" => [
+                "Guida passo passo",
+                "Prima di iniziare",
+                "Esportato il",
+                "Versione",
+                "Autore",
+                "Passaggi",
+                "In questa pagina",
+                "Passaggio",
+                "passaggio",
+                "passaggi",
+                "Generato con Walkmark",
+            ],
+            "spanish" => [
+                "Guía paso a paso",
+                "Antes de empezar",
+                "Exportado el",
+                "Versión",
+                "Autor",
+                "Pasos",
+                "En esta página",
+                "Paso",
+                "paso",
+                "pasos",
+                "Generado con Walkmark",
+            ],
+            "french" => [
+                "Guide pas à pas",
+                "Avant de commencer",
+                "Exporté le",
+                "Version",
+                "Auteur",
+                "Étapes",
+                "Sur cette page",
+                "Étape",
+                "étape",
+                "étapes",
+                "Généré avec Walkmark",
+            ],
+            "german" => [
+                "Schritt-für-Schritt-Anleitung",
+                "Bevor Sie beginnen",
+                "Exportiert am",
+                "Version",
+                "Autor",
+                "Schritte",
+                "Auf dieser Seite",
+                "Schritt",
+                "Schritt",
+                "Schritte",
+                "Erstellt mit Walkmark",
+            ],
+            "portuguese" => [
+                "Guia passo a passo",
+                "Antes de começar",
+                "Exportado em",
+                "Versão",
+                "Autor",
+                "Passos",
+                "Nesta página",
+                "Passo",
+                "passo",
+                "passos",
+                "Gerado com Walkmark",
+            ],
+            "dutch" => [
+                "Stapsgewijze handleiding",
+                "Voordat je begint",
+                "Geëxporteerd op",
+                "Versie",
+                "Auteur",
+                "Stappen",
+                "Op deze pagina",
+                "Stap",
+                "stap",
+                "stappen",
+                "Gemaakt met Walkmark",
+            ],
             _ => return None,
         };
         Some(Self::from_values(words))
@@ -411,7 +483,11 @@ impl DocumentLabels {
 
     /// "1 step", "3 steps".
     pub fn step_count(&self, count: usize) -> String {
-        let word = if count == 1 { self.step_one() } else { self.step_many() };
+        let word = if count == 1 {
+            self.step_one()
+        } else {
+            self.step_many()
+        };
         format!("{count} {word}")
     }
 
@@ -897,22 +973,17 @@ impl Settings {
         self.audience = crate::limits::clamp(&self.audience, crate::limits::AUDIENCE);
         self.language = crate::limits::clamp(&self.language, crate::limits::LANGUAGE);
         for product in &mut self.products {
-            product.name =
-                crate::limits::clamp(&product.name, crate::limits::PRODUCT_NAME);
+            product.name = crate::limits::clamp(&product.name, crate::limits::PRODUCT_NAME);
             for term in &mut product.vocabulary {
-                term.term =
-                    crate::limits::clamp(&term.term, crate::limits::VOCABULARY_TERM);
-                term.explanation = crate::limits::clamp(
-                    &term.explanation,
-                    crate::limits::VOCABULARY_EXPLANATION,
-                );
+                term.term = crate::limits::clamp(&term.term, crate::limits::VOCABULARY_TERM);
+                term.explanation =
+                    crate::limits::clamp(&term.explanation, crate::limits::VOCABULARY_EXPLANATION);
             }
         }
         self.clamp_labels();
         for config in self.providers.values_mut() {
             config.model = crate::limits::clamp(&config.model, crate::limits::MODEL_ID);
-            config.base_url =
-                crate::limits::clamp(&config.base_url, crate::limits::BASE_URL);
+            config.base_url = crate::limits::clamp(&config.base_url, crate::limits::BASE_URL);
         }
     }
 
@@ -1097,7 +1168,9 @@ mod label_tests {
     #[test]
     fn saving_drops_empty_entries_and_trims_the_rest() {
         let mut settings = Settings::default();
-        settings.labels.insert("Italian".into(), DocumentLabels::default());
+        settings
+            .labels
+            .insert("Italian".into(), DocumentLabels::default());
         settings.labels.insert(
             "Lithuanian".into(),
             DocumentLabels {
@@ -1123,12 +1196,23 @@ mod label_tests {
 
     #[test]
     fn every_built_in_language_fills_every_label() {
-        for language in ["English", "Italian", "Spanish", "French", "German", "Portuguese", "Dutch"] {
+        for language in [
+            "English",
+            "Italian",
+            "Spanish",
+            "French",
+            "German",
+            "Portuguese",
+            "Dutch",
+        ] {
             let labels = DocumentLabels::built_in(language).unwrap();
             assert!(!labels.is_blank());
             let json = serde_json::to_value(&labels).unwrap();
             for (key, value) in json.as_object().unwrap() {
-                assert!(!value.as_str().unwrap().trim().is_empty(), "{language}: {key} is empty");
+                assert!(
+                    !value.as_str().unwrap().trim().is_empty(),
+                    "{language}: {key} is empty"
+                );
             }
         }
     }
@@ -1142,7 +1226,10 @@ mod label_tests {
         assert_eq!(italian.step_count(1), "1 passaggio");
         assert_eq!(italian.step_count(4), "4 passaggi");
         let german = DocumentLabels::built_in("German").unwrap();
-        assert_eq!((german.steps.as_str(), german.step.as_str()), ("Schritte", "Schritt"));
+        assert_eq!(
+            (german.steps.as_str(), german.step.as_str()),
+            ("Schritte", "Schritt")
+        );
     }
 
     #[test]

@@ -28,7 +28,11 @@ pub fn get_settings(state: State<AppState>) -> Settings {
 }
 
 #[tauri::command]
-pub fn save_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> Result<Settings> {
+pub fn save_settings(
+    app: AppHandle,
+    state: State<AppState>,
+    settings: Settings,
+) -> Result<Settings> {
     let mut settings = settings;
     settings.concurrency = settings.concurrency.clamp(1, 8);
     settings.capture.sample_interval_ms = settings.capture.sample_interval_ms.clamp(200, 5000);
@@ -281,9 +285,7 @@ pub fn start_recording(
     let settings = state.settings.lock().clone();
     if let Some(id) = product_id.as_deref() {
         if settings.product(id).is_none() {
-            return Err(AppError::Invalid(format!(
-                "Unknown product `{id}`."
-            )));
+            return Err(AppError::Invalid(format!("Unknown product `{id}`.")));
         }
     }
 
@@ -331,10 +333,7 @@ pub fn stop_recording(app: AppHandle, state: State<AppState>) -> Result<Project>
     let session = state.session.lock().take().ok_or(AppError::NotRecording)?;
 
     // Tell both windows immediately — before the capture thread joins.
-    let _ = app.emit(
-        crate::capture::session::EVT_TICK,
-        session.stopping_tick(),
-    );
+    let _ = app.emit(crate::capture::session::EVT_TICK, session.stopping_tick());
 
     session.stop();
     window::leave_recording_mode(&app);
@@ -725,7 +724,11 @@ pub fn update_step(
 }
 
 #[tauri::command]
-pub fn reorder_steps(app: AppHandle, state: State<AppState>, order: Vec<String>) -> Result<Project> {
+pub fn reorder_steps(
+    app: AppHandle,
+    state: State<AppState>,
+    order: Vec<String>,
+) -> Result<Project> {
     let mut guard = state.project.lock();
     let project = guard
         .as_mut()
@@ -790,7 +793,9 @@ pub fn undo_step_deletion(
 #[tauri::command]
 pub fn merge_steps(app: AppHandle, state: State<AppState>, ids: Vec<String>) -> Result<Project> {
     if ids.len() < 2 {
-        return Err(AppError::Invalid("Select at least two steps to merge.".into()));
+        return Err(AppError::Invalid(
+            "Select at least two steps to merge.".into(),
+        ));
     }
     let project = {
         let mut guard = state.project.lock();
@@ -989,12 +994,7 @@ pub async fn export_document(
     // Encoding a few dozen PNGs and laying out a PDF is heavy enough that it
     // would visibly stall the window.
     tauri::async_runtime::spawn_blocking(move || {
-        export::write(
-            &app,
-            &project,
-            &options,
-            std::path::Path::new(&destination),
-        )
+        export::write(&app, &project, &options, std::path::Path::new(&destination))
     })
     .await
     .map_err(|e| AppError::Other(e.to_string()))?

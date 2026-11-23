@@ -88,8 +88,7 @@ fn effective_settings(
     {
         effective.language = language;
     } else if !project.language.trim().is_empty() {
-        effective.language =
-            crate::limits::clamp(&project.language, crate::limits::LANGUAGE);
+        effective.language = crate::limits::clamp(&project.language, crate::limits::LANGUAGE);
     }
     effective
 }
@@ -384,7 +383,6 @@ pub async fn run(
         if let Some(project) = state.project.lock().as_ref() {
             let _ = storage::save_project(&app, project);
         }
-
     }
 
     let cancelled = cancel.load(Ordering::SeqCst);
@@ -590,7 +588,13 @@ fn mark_queued(app: &AppHandle, targets: &[String]) {
     }
 }
 
-fn emit_progress(app: &AppHandle, done: usize, total: usize, running: bool, message: Option<String>) {
+fn emit_progress(
+    app: &AppHandle,
+    done: usize,
+    total: usize,
+    running: bool,
+    message: Option<String>,
+) {
     let _ = app.emit(
         EVT_PROGRESS,
         GenerationProgress {

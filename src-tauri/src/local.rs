@@ -397,7 +397,9 @@ pub fn catalog(installed: &[InstalledModel], total_memory: u64) -> Vec<CatalogEn
 fn normalize(endpoint: &str) -> String {
     let endpoint = endpoint.trim().trim_end_matches('/');
     if endpoint.is_empty() {
-        crate::models::Provider::Ollama.default_base_url().to_string()
+        crate::models::Provider::Ollama
+            .default_base_url()
+            .to_string()
     } else if endpoint.contains("://") {
         endpoint.to_string()
     } else {
@@ -458,13 +460,19 @@ mod tests {
     fn endpoints_are_normalized_into_something_reqwest_accepts() {
         assert_eq!(normalize(""), "http://127.0.0.1:11434");
         assert_eq!(normalize("localhost:11434"), "http://localhost:11434");
-        assert_eq!(normalize("http://box.local:11434/"), "http://box.local:11434");
+        assert_eq!(
+            normalize("http://box.local:11434/"),
+            "http://box.local:11434"
+        );
     }
 
     #[test]
     fn progress_lines_carry_the_byte_counts() {
-        let update = parse_line("moondream", r#"{"status":"downloading","completed":5,"total":10}"#)
-            .unwrap();
+        let update = parse_line(
+            "moondream",
+            r#"{"status":"downloading","completed":5,"total":10}"#,
+        )
+        .unwrap();
         assert_eq!(update.completed, 5);
         assert_eq!(update.total, 10);
         assert!(!update.done);
@@ -490,15 +498,23 @@ mod tests {
 
     #[test]
     fn vision_is_read_from_capabilities_when_the_daemon_reports_them() {
-        assert!(detect_vision(&json!({ "capabilities": ["completion", "vision"] })));
+        assert!(detect_vision(
+            &json!({ "capabilities": ["completion", "vision"] })
+        ));
         assert!(!detect_vision(&json!({ "capabilities": ["completion"] })));
     }
 
     #[test]
     fn vision_falls_back_to_the_projector_on_older_daemons() {
-        assert!(detect_vision(&json!({ "projector_info": { "general.architecture": "clip" } })));
-        assert!(detect_vision(&json!({ "details": { "families": ["qwen3vl"] } })));
-        assert!(!detect_vision(&json!({ "details": { "families": ["llama"] } })));
+        assert!(detect_vision(
+            &json!({ "projector_info": { "general.architecture": "clip" } })
+        ));
+        assert!(detect_vision(
+            &json!({ "details": { "families": ["qwen3vl"] } })
+        ));
+        assert!(!detect_vision(
+            &json!({ "details": { "families": ["llama"] } })
+        ));
     }
 
     #[test]

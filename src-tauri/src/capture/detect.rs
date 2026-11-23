@@ -149,7 +149,10 @@ mod tests {
             "a panel opening should register, a caret blinking should not: {default}"
         );
         // An idle screen traces at roughly 0.001; keep a wide margin over it.
-        assert!(threshold_for(1.0) > 0.004, "top of the slider is too twitchy");
+        assert!(
+            threshold_for(1.0) > 0.004,
+            "top of the slider is too twitchy"
+        );
     }
 
     #[test]

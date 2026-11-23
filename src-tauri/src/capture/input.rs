@@ -193,9 +193,7 @@ impl ModifierState {
     }
 
     fn is_walkmark_shortcut(&self, key: Key) -> bool {
-        self.shift
-            && self.alt
-            && matches!(key, Key::KeyS | Key::KeyM | Key::KeyP)
+        self.shift && self.alt && matches!(key, Key::KeyS | Key::KeyM | Key::KeyP)
     }
 }
 

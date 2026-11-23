@@ -60,7 +60,14 @@ pub fn plain_text(input: &str) -> String {
                 }
             }
             Event::SoftBreak | Event::HardBreak => out.push('\n'),
-            Event::End(TagEnd::Paragraph | TagEnd::Heading(_) | TagEnd::Item | TagEnd::CodeBlock | TagEnd::TableRow | TagEnd::TableHead) => {
+            Event::End(
+                TagEnd::Paragraph
+                | TagEnd::Heading(_)
+                | TagEnd::Item
+                | TagEnd::CodeBlock
+                | TagEnd::TableRow
+                | TagEnd::TableHead,
+            ) => {
                 if !out.ends_with('\n') {
                     out.push('\n');
                 }

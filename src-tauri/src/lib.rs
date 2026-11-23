@@ -5,8 +5,8 @@ mod error;
 mod export;
 mod guide_markdown;
 mod imaging;
-pub mod local;
 mod limits;
+pub mod local;
 mod models;
 mod state;
 mod storage;
@@ -23,9 +23,7 @@ pub mod probe {
 
     pub use crate::capture::detect::threshold_for;
     pub use crate::capture::{has_permission, list_sources};
-    pub use crate::export::{
-        html, markdown, pdf, ExportOptions, RenderedImage, RenderedStep,
-    };
+    pub use crate::export::{html, markdown, pdf, ExportOptions, RenderedImage, RenderedStep};
     pub use crate::imaging::{apply_annotations, encode_jpeg, encode_png, fit_width, load};
     pub use crate::models::{ExportFormat, Project, Provider};
 
@@ -80,7 +78,9 @@ pub mod probe {
             let at = started.elapsed();
 
             let activity = prev.as_ref().map_or(0.0, |p| detect::distance(p, &sig));
-            let drift = committed.as_ref().map_or(1.0, |c| detect::distance(c, &sig));
+            let drift = committed
+                .as_ref()
+                .map_or(1.0, |c| detect::distance(c, &sig));
             let gap_ok = last_commit.is_none_or(|t| at.saturating_sub(t) >= min_gap);
             let settled = prev.is_none() || detect::is_settled(activity);
             let commit = drift > threshold && gap_ok && settled;

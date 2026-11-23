@@ -31,7 +31,12 @@ pub fn fit_width(image: RgbaImage, max_w: u32) -> RgbaImage {
         return image;
     }
     let h = (image.height() as f32 * max_w as f32 / image.width() as f32).round() as u32;
-    image::imageops::resize(&image, max_w, h.max(1), image::imageops::FilterType::Lanczos3)
+    image::imageops::resize(
+        &image,
+        max_w,
+        h.max(1),
+        image::imageops::FilterType::Lanczos3,
+    )
 }
 
 /// Burn annotations into the pixels.
@@ -232,11 +237,9 @@ fn mosaic(image: &mut RgbaImage, x: u32, y: u32, w: u32, h: u32) {
                     n += 1;
                 }
             }
-            if let (Some(r), Some(g), Some(b)) = (
-                r.checked_div(n),
-                g.checked_div(n),
-                b.checked_div(n),
-            ) {
+            if let (Some(r), Some(g), Some(b)) =
+                (r.checked_div(n), g.checked_div(n), b.checked_div(n))
+            {
                 let avg = Rgba([r as u8, g as u8, b as u8, 255]);
                 for py in by..by + bh {
                     for px in bx..bx + bw {
@@ -275,7 +278,9 @@ fn blend_fill(image: &mut RgbaImage, x: u32, y: u32, w: u32, h: u32, tint: Rgba<
 }
 
 fn lerp(a: u8, b: u8, t: f32) -> u8 {
-    (a as f32 + (b as f32 - a as f32) * t).round().clamp(0.0, 255.0) as u8
+    (a as f32 + (b as f32 - a as f32) * t)
+        .round()
+        .clamp(0.0, 255.0) as u8
 }
 
 fn outline(image: &mut RgbaImage, x: u32, y: u32, w: u32, h: u32, color: Rgba<u8>, stroke: u32) {

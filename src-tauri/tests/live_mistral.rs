@@ -29,7 +29,9 @@ fn sample_frame() -> Option<PathBuf> {
             .filter_map(|e| e.ok())
             .find_map(|entry| {
                 let frames = entry.path().join("frames");
-                std::fs::read_dir(frames).ok()?.find_map(|f| f.ok().map(|f| f.path()))
+                std::fs::read_dir(frames)
+                    .ok()?
+                    .find_map(|f| f.ok().map(|f| f.path()))
             })
     })
 }

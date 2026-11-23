@@ -95,7 +95,11 @@ pub fn list_sources(with_thumbnails: bool) -> Result<Vec<CaptureSource>> {
             height,
             is_primary,
             thumbnail: with_thumbnails
-                .then(|| m.capture_image().ok().map(|img| thumbnail_data_url(&img, 480)))
+                .then(|| {
+                    m.capture_image()
+                        .ok()
+                        .map(|img| thumbnail_data_url(&img, 480))
+                })
                 .flatten(),
         });
     }
@@ -141,7 +145,11 @@ pub fn list_sources(with_thumbnails: bool) -> Result<Vec<CaptureSource>> {
             height,
             is_primary: false,
             thumbnail: with_thumbnails
-                .then(|| w.capture_image().ok().map(|img| thumbnail_data_url(&img, 480)))
+                .then(|| {
+                    w.capture_image()
+                        .ok()
+                        .map(|img| thumbnail_data_url(&img, 480))
+                })
                 .flatten(),
         });
     }
@@ -179,7 +187,12 @@ pub fn downscale(image: RgbaImage, max_w: u32) -> RgbaImage {
         return image;
     }
     let h = (image.height() as f32 * max_w as f32 / image.width() as f32).round() as u32;
-    image::imageops::resize(&image, max_w, h.max(1), image::imageops::FilterType::Lanczos3)
+    image::imageops::resize(
+        &image,
+        max_w,
+        h.max(1),
+        image::imageops::FilterType::Lanczos3,
+    )
 }
 
 // ---------------------------------------------------------------------------

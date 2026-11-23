@@ -85,7 +85,11 @@ pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<St
 
 /// `options` plus what only the app knows: today's date, and the fixed wording
 /// for the guide's language from Settings.
-pub fn resolve_options(app: &AppHandle, project: &Project, options: &ExportOptions) -> ExportOptions {
+pub fn resolve_options(
+    app: &AppHandle,
+    project: &Project,
+    options: &ExportOptions,
+) -> ExportOptions {
     let settings = app.state::<AppState>().settings.lock().clone();
     let language = if project.language.trim().is_empty() {
         settings.language.clone()

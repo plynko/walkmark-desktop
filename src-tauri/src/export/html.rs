@@ -1,6 +1,6 @@
-use base64::Engine;
 use crate::guide_markdown::render as markdown;
 use crate::models::{DocumentLabels, Project};
+use base64::Engine;
 
 use super::{ExportOptions, RenderedStep};
 
@@ -56,14 +56,22 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
             title = esc(&step.title)
         ));
         if !step.body.is_empty() {
-            body.push_str(&format!("<div class=\"prose\">{}</div>\n", markdown(&step.body)));
+            body.push_str(&format!(
+                "<div class=\"prose\">{}</div>\n",
+                markdown(&step.body)
+            ));
         }
         if let Some(image) = &step.image {
             let data = base64::engine::general_purpose::STANDARD.encode(&image.png);
             body.push_str(&format!(
                 "<figure><img src=\"data:image/png;base64,{data}\" alt=\"{alt}\" \
                  width=\"{w}\" height=\"{h}\" loading=\"lazy\"></figure>\n",
-                alt = esc(&format!("{} {}: {}", options.labels.step(), step.number, step.title)),
+                alt = esc(&format!(
+                    "{} {}: {}",
+                    options.labels.step(),
+                    step.number,
+                    step.title
+                )),
                 w = image.width,
                 h = image.height
             ));

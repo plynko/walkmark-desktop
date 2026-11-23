@@ -48,10 +48,14 @@ pub fn body(model: &str, ask: &Ask<'_>) -> Value {
 
 fn json_instruction(schema_name: &str) -> &'static str {
     match schema_name {
-        "outline" => "Respond with one JSON object only, no markdown fences or commentary: \
-{\"title\": string, \"summary\": string, \"prerequisites\": string[], \"steps\": string[]}.",
-        _ => "Respond with one JSON object only, no markdown fences or commentary: \
-{\"title\": string, \"body\": string}.",
+        "outline" => {
+            "Respond with one JSON object only, no markdown fences or commentary: \
+{\"title\": string, \"summary\": string, \"prerequisites\": string[], \"steps\": string[]}."
+        }
+        _ => {
+            "Respond with one JSON object only, no markdown fences or commentary: \
+{\"title\": string, \"body\": string}."
+        }
     }
 }
 
@@ -116,7 +120,11 @@ mod tests {
 
     #[test]
     fn reads_json_from_the_assistant_message() {
-        let payload = r#"{"choices":[{"message":{"content":"{\"title\":\"Go\",\"body\":\"Click.\"}"}}]}"#;
-        assert_eq!(text(payload).unwrap(), "{\"title\":\"Go\",\"body\":\"Click.\"}");
+        let payload =
+            r#"{"choices":[{"message":{"content":"{\"title\":\"Go\",\"body\":\"Click.\"}"}}]}"#;
+        assert_eq!(
+            text(payload).unwrap(),
+            "{\"title\":\"Go\",\"body\":\"Click.\"}"
+        );
     }
 }

@@ -217,11 +217,19 @@ mod label_prompt_tests {
     #[test]
     fn every_label_is_described_and_asked_for() {
         let english = serde_json::to_value(DocumentLabels::english()).unwrap();
-        let mut known: Vec<&str> = english.as_object().unwrap().keys().map(String::as_str).collect();
+        let mut known: Vec<&str> = english
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         let mut described: Vec<&str> = LABEL_MEANINGS.iter().map(|(key, _)| *key).collect();
         known.sort_unstable();
         described.sort_unstable();
-        assert_eq!(known, described, "a label was added without saying what it is for");
+        assert_eq!(
+            known, described,
+            "a label was added without saying what it is for"
+        );
 
         let schema = labels_schema();
         assert_eq!(schema["required"].as_array().unwrap().len(), known.len());

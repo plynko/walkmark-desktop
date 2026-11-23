@@ -15,9 +15,11 @@ pub fn models_url(base: &str) -> String {
 
 pub fn body(model: &str, ask: &Ask<'_>) -> Value {
     let mut parts = vec![json!({ "text": ask.prompt })];
-    parts.extend(ask.images.iter().map(|image| {
-        json!({ "inlineData": { "mimeType": "image/jpeg", "data": image.b64() } })
-    }));
+    parts.extend(
+        ask.images.iter().map(
+            |image| json!({ "inlineData": { "mimeType": "image/jpeg", "data": image.b64() } }),
+        ),
+    );
 
     let mut config = json!({
         "temperature": ask.temperature,

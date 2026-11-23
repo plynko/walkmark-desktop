@@ -136,7 +136,9 @@ mod tests {
 
     #[test]
     fn an_empty_answer_suggests_a_bigger_model() {
-        let error = text(r#"{"message":{"content":""}}"#).unwrap_err().to_string();
+        let error = text(r#"{"message":{"content":""}}"#)
+            .unwrap_err()
+            .to_string();
         assert!(error.contains("larger model"), "{error}");
     }
 
