@@ -1,7 +1,9 @@
+import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
+page.setDefaultTimeout(10000);
 
 const errors = [];
 page.on("pageerror", (err) => errors.push(String(err)));
@@ -149,20 +151,31 @@ await page.addInitScript(() => {
   };
 });
 
+// Match the desktop app: icon APIs and other external origins are unavailable.
+await page.route("**/*", (route) =>
+  new URL(route.request().url()).origin === "http://localhost:1420"
+    ? route.continue()
+    : route.abort(),
+);
 await page.goto("http://localhost:1420/", { waitUntil: "networkidle" });
-await page.waitForTimeout(3000);
+
+const settingsButton = page.getByRole("button", { name: "Settings", exact: true });
+await settingsButton.locator("svg").waitFor({ state: "visible", timeout: 5000 });
 
 const bootText = await page.locator("body").innerText();
 const bootHtml = await page.locator("#root").innerHTML();
 
-await page.keyboard.press("Meta+Comma");
-await page.waitForTimeout(800);
+await settingsButton.click();
+await page.getByRole("button", { name: "Close", exact: true })
+  .locator("svg").waitFor({ state: "visible", timeout: 5000 });
 
 // Exercise the model settings panel — the most likely crash site.
 await page.getByRole("tab", { name: "Model" }).click();
-await page.waitForTimeout(300);
-await page.getByRole("button", { name: "On this Mac" }).click();
-await page.waitForTimeout(1500);
+const provider = page.getByRole("button", { name: "Google Gemini", exact: true });
+await provider.locator("svg").waitFor({ state: "visible" });
+await provider.click();
+await page.getByRole("option", { name: "On this Mac" }).click();
+await page.getByRole("button", { name: "On this Mac", exact: true }).waitFor();
 
 const dialog = await page.locator('[role="dialog"]').count();
 const bodyText = await page.locator("body").innerText();
@@ -182,3 +195,4 @@ console.log(
 );
 await page.screenshot({ path: "/tmp/walkmark-ui-check.png", fullPage: true });
 await browser.close();
+assert.deepEqual(errors, []);
