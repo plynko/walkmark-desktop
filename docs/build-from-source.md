@@ -15,6 +15,26 @@ Compile Walkmark locally for development, custom builds, or platforms without a 
 
 HTTPS to the AI providers uses the operating system's own TLS (Schannel on Windows, Security.framework on macOS, OpenSSL on Linux), so no C code is compiled for it. On Linux install the OpenSSL headers (`libssl-dev` on Debian and Ubuntu) next to the other Tauri prerequisites.
 
+## Self-contained toolchain (optional)
+
+If you would rather not install Rust and pnpm system-wide, `scripts/setup-toolchain.sh` installs them, the project dependencies and the Chromium used by the UI tests into `.toolchain/` inside the repository (ignored by git). It only adds what is missing, so it is safe to run again.
+
+```bash
+scripts/setup-toolchain.sh        # once
+source scripts/dev-env.sh         # in each shell; puts cargo, pnpm and the rest on PATH
+```
+
+### Building for Windows from macOS
+
+```bash
+scripts/setup-toolchain.sh --windows   # adds llvm and makensis (Homebrew) and cargo-xwin
+source scripts/dev-env.sh
+cargo xwin check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc
+pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis
+```
+
+The first `cargo xwin` run downloads Microsoft's Windows SDK and C runtime; by running it you accept Microsoft's licence for them. Only the NSIS installer can be produced when cross-compiling. Use `aarch64-pc-windows-msvc` for ARM64. The Rust code has been checked to compile for both targets; running the result on Windows has not been tested.
+
 ## Clone and install
 
 ```bash

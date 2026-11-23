@@ -29,3 +29,6 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+# Build tools installed by scripts/setup-toolchain.sh
+.toolchain/
