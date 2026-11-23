@@ -74,6 +74,7 @@ Release filenames follow `Walkmark_<version>_<arch>.<ext>` — see `.github/work
 
 ```bash
 pnpm typecheck
+pnpm test:ui    # first run: pnpm exec playwright install chromium
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 

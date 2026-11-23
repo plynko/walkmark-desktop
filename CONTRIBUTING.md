@@ -41,8 +41,11 @@ Adding a cloud provider? Follow the checklist in the architecture doc (`catalog.
 
 ```bash
 pnpm typecheck
+pnpm test:ui    # editor tests in a browser; first run: pnpm exec playwright install chromium
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
+
+`pnpm test:ui` runs the real Svelte UI against a mocked Tauri backend (`tests/ui/fixtures.ts`). It does not cover screen capture, the clipboard or macOS permissions, so check those by hand.
 
 Add tests when behaviour is easy to regress (parsing, export formatting, storage). Live provider tests belong behind env vars (`MISTRAL_API_KEY`, etc.).
 

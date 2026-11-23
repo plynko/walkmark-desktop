@@ -21,6 +21,7 @@ Use pnpm 11.5.0 from `package.json`, Node.js 22 (matching CI), Rust, and your pl
 - `pnpm typecheck`: check Svelte and TypeScript.
 - `pnpm build`: build the frontend.
 - `pnpm app:build`: build native application bundles.
+- `pnpm test:ui`: run the Playwright editor tests in `tests/ui/` against a mocked Tauri backend (first run: `pnpm exec playwright install chromium`).
 - `pnpm test:rust`: run Rust unit and integration tests.
 - `cargo fmt --manifest-path src-tauri/Cargo.toml`: format Rust.
 - `cargo clippy --manifest-path src-tauri/Cargo.toml`: lint Rust.
@@ -35,7 +36,7 @@ Use Svelte 5 runes and Tailwind utilities. Keep changes focused. No frontend for
 
 Use Rust’s built-in test framework with descriptive snake_case test names. Add regression coverage for parsing, export formatting, and storage; no numerical coverage threshold is configured. `wire.rs` tests provider HTTP against local stubs. Live Mistral tests require `RUN_LIVE_TESTS=1`, local credentials, and a recorded frame; leave them opt-in.
 
-Run typechecking and Rust tests before submitting. Manually verify affected recording, writing, and export flows.
+Run typechecking, `pnpm test:ui` and Rust tests before submitting. UI tests do not cover real capture, clipboard or macOS permissions; verify those by hand. Manually verify affected recording, writing, and export flows.
 
 ## Commit & Pull Request Guidelines
 

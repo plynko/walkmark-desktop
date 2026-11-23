@@ -1,0 +1,244 @@
+import { test as base, expect, type Page } from "@playwright/test";
+
+/** One recorded Tauri command, in call order. */
+export type Call = { cmd: string; args: Record<string, unknown> };
+
+export interface App {
+  page: Page;
+  /** Every command the UI sent to the mocked backend. */
+  calls(cmd?: string): Promise<Call[]>;
+  /** Load the library and open the sample guide in the editor. */
+  openGuide(): Promise<void>;
+}
+
+/**
+ * Installs a stateful stand-in for the Tauri backend. It implements just enough
+ * of the commands the editor uses (projects, steps, markdown preview) to
+ * exercise the real Svelte UI in a plain browser. Native behaviour — screen
+ * capture, the clipboard and macOS permissions — is not covered here.
+ */
+function installTauriMock() {
+  const settings = {
+    provider: "gemini",
+    providers: {},
+    audience: "a colleague",
+    tone: "neutral",
+    language: "English",
+    concurrency: 3,
+    capture: {
+      sampleIntervalMs: 600,
+      sensitivity: 0.55,
+      minGapMs: 1200,
+      settle: true,
+      maxWidth: 1800,
+      countdownSecs: 3,
+      hideWindow: true,
+    },
+    theme: "light",
+    onboarded: true,
+    products: [{ id: "general", name: "General", vocabulary: [] }],
+    defaultProductId: "general",
+  };
+
+  const provider = (id: string, name: string, local: boolean) => ({
+    id,
+    name,
+    blurb: "",
+    local,
+    needsKey: !local,
+    keyUrl: "https://example.com/key",
+    keyHint: "",
+    keyGuide: [],
+    baseUrlEditable: local,
+    baseUrlRequired: false,
+    defaultBaseUrl: local ? "http://127.0.0.1:11434" : "",
+    defaultModel: local ? "qwen3-vl:8b" : "gemini-3.6-flash",
+    models: local ? [] : [{ id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", note: "", tier: "recommended" }],
+  });
+  const catalog = {
+    providers: [provider("gemini", "Google Gemini", false), provider("ollama", "On this Mac", true)],
+    configured: [],
+  };
+  const local = {
+    running: true,
+    version: "0.6.2",
+    endpoint: "http://127.0.0.1:11434",
+    downloadUrl: "https://ollama.com/download",
+    totalMemory: 16_000_000_000,
+    downloading: false,
+    models: [],
+    catalog: [],
+  };
+
+  const makeStep = (id: string, title: string, frame: string, alternates: string[] = []) => ({
+    id,
+    title,
+    body: "",
+    offsetMs: 0,
+    frame,
+    alternates,
+    annotations: [],
+    include: true,
+    locked: false,
+    status: "draft",
+    error: null,
+    manual: false,
+  });
+
+  const state = {
+    project: {
+      id: "guide-1",
+      title: "Sample guide",
+      summary: "",
+      prerequisites: [],
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      sourceLabel: "Window",
+      language: "English",
+      steps: [
+        { ...makeStep("s1", "Open the menu", "frame-b.png", ["frame-a.png"]), body: "Click **File**." },
+        makeStep("s2", "Save the file", "frame-c.png"),
+      ],
+    },
+    added: 0,
+  };
+
+  const calls: { cmd: string; args: Record<string, unknown> }[] = [];
+  (window as any).__calls = calls;
+
+  const summary = () => ({
+    id: state.project.id,
+    title: state.project.title,
+    updatedAt: state.project.updatedAt,
+    stepCount: state.project.steps.length,
+    readyCount: 0,
+    cover: null,
+  });
+
+  const addStep = (args: any) => {
+    const step = makeStep(`added-${++state.added}`, "", `manual-${state.added}.png`);
+    const steps = state.project.steps;
+    const at = args.afterStepId
+      ? steps.findIndex((s) => s.id === args.afterStepId) + 1
+      : steps.length;
+    steps.splice(at, 0, step);
+    return { project: structuredClone(state.project), stepId: step.id };
+  };
+
+  // Just enough Markdown to see that the preview is rendered, not echoed.
+  const markdown = (text: string) =>
+    `<p>${text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</p>`;
+
+  function mockInvoke(cmd: string, args: any) {
+    switch (cmd) {
+      case "plugin:event|listen":
+        return 1;
+      case "plugin:event|unlisten":
+        return null;
+      case "get_settings":
+      case "save_settings":
+        return args.settings ?? settings;
+      case "permission_status":
+        return { granted: true, required: false };
+      case "provider_catalog":
+        return catalog;
+      case "local_status":
+        return local;
+      case "recording_status":
+        return { active: false, state: "idle", stepCount: 0 };
+      case "list_projects":
+        return [summary()];
+      case "current_project":
+        return null;
+      case "open_project":
+        return structuredClone(state.project);
+      case "frame_path":
+        return args.frame;
+      case "list_sources":
+        return [
+          {
+            id: "monitor-1",
+            kind: "monitor",
+            name: "Built-in display",
+            detail: "1440 × 900",
+            width: 1440,
+            height: 900,
+            isPrimary: true,
+            thumbnail: null,
+          },
+        ];
+      case "update_step": {
+        const step = state.project.steps.find((s) => s.id === args.id)!;
+        const { frame, ...rest } = args.patch;
+        Object.assign(step, rest);
+        if (frame && step.alternates.includes(frame)) {
+          step.alternates = [...step.alternates.filter((f) => f !== frame), step.frame];
+          step.frame = frame;
+        }
+        return structuredClone(step);
+      }
+      case "import_step":
+      case "paste_step":
+      case "capture_step":
+        return addStep(args);
+      case "preview_markdown":
+        return markdown(args.text);
+      default:
+        return null;
+    }
+  }
+
+  let nextCallback = 1;
+  (window as any).__TAURI_INTERNALS__ = {
+    invoke(cmd: string, args?: Record<string, unknown>) {
+      calls.push({ cmd, args: args ?? {} });
+      return Promise.resolve(mockInvoke(cmd, args ?? {}));
+    },
+    transformCallback: () => nextCallback++,
+    unregisterCallback() {},
+    // Each frame name becomes its own inline picture, so tests can tell which
+    // frame a step is showing from the <img src>.
+    convertFileSrc: (path: string) =>
+      `data:image/svg+xml,${encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000"><rect width="1600" height="1000" fill="#ccd"/><text x="40" y="120" font-size="96">${path}</text></svg>`,
+      )}`,
+    metadata: { currentWindow: { label: "main" } },
+  };
+  (window as any).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    registerListener() {},
+    unregisterListener() {},
+  };
+}
+
+export const test = base.extend<{ app: App }>({
+  app: async ({ page }, use) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(String(error)));
+
+    await page.addInitScript(installTauriMock);
+    // Match the desktop app: external origins (icon APIs, fonts) are unavailable.
+    await page.route("**/*", (route) =>
+      new URL(route.request().url()).origin === "http://localhost:1420"
+        ? route.continue()
+        : route.abort(),
+    );
+    await page.goto("/", { waitUntil: "networkidle" });
+
+    await use({
+      page,
+      calls: (cmd) =>
+        page.evaluate(
+          (name) => (window as any).__calls.filter((call: Call) => !name || call.cmd === name),
+          cmd,
+        ),
+      openGuide: async () => {
+        await page.getByRole("button", { name: /^Sample guide/ }).click();
+        await expect(page.getByRole("textbox", { name: "Step description" }).first()).toBeVisible();
+      },
+    });
+
+    expect(errors).toEqual([]);
+  },
+});
+
+export { expect };

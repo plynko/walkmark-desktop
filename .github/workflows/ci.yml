@@ -25,6 +25,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Editor UI tests
+        run: pnpm test:ui
+
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Linux dependencies
