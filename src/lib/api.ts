@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type {
   Annotation,
+  Rect,
   AppError,
   CaptureSource,
   ExportFormat,
@@ -139,13 +140,22 @@ export interface StepPatch {
   locked?: boolean;
   frame?: string;
   annotations?: Annotation[];
+  crop?: Rect | null;
 }
+
+export const importStep = (projectId: string, afterStepId: string | null) =>
+  call<{ project: Project; stepId: string } | null>("import_step", {
+    projectId,
+    afterStepId,
+  });
 
 export const updateStep = (id: string, patch: StepPatch) =>
   call<Step>("update_step", { id, patch });
 export const reorderSteps = (order: string[]) =>
   call<Project>("reorder_steps", { order });
 export const deleteSteps = (ids: string[]) => call<Project>("delete_steps", { ids });
+export const undoStepDeletion = (projectId: string) =>
+  call<Project>("undo_step_deletion", { projectId });
 export const mergeSteps = (ids: string[]) => call<Project>("merge_steps", { ids });
 
 // --- Generation -------------------------------------------------------------

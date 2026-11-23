@@ -44,14 +44,16 @@
 	<div class="no-drag flex min-w-0 flex-1 items-center gap-3">
 		{#if store.route === "editor" && store.project}
 			{#if !store.recording}
-				<button
-					type="button"
-					class="grid size-8 place-items-center rounded-2xl text-(--text)/56 transition-colors hover:bg-(--text)/5 hover:text-(--text)"
-					aria-label="Back to all documents"
+				<Button
+					size="sm"
+					variant="ghost"
+					class="h-8 shrink-0 px-3 focus-visible:ring-2 focus-visible:ring-(--text)/40"
+					title="Back to all documents"
 					onclick={() => void store.leaveProject()}
 				>
-					<Icon icon="lucide:chevron-left" class="size-4" />
-				</button>
+					<Icon icon="lucide:chevron-left" class="size-4" aria-hidden="true" />
+					Home
+				</Button>
 			{/if}
 			<div class="flex min-w-0 items-center gap-2">
 				{#if editing}
@@ -70,7 +72,7 @@
 					/>
 				{:else}
 					<button
-						class="max-w-[420px] truncate rounded-xl px-2.5 py-1 text-sm font-medium text-(--text) hover:bg-(--text)/5"
+						class="min-w-0 max-w-[420px] truncate rounded-xl px-2.5 py-1 text-sm font-medium text-(--text) hover:bg-(--text)/5"
 						onclick={() => (editing = true)}
 					>
 						{store.project.title}

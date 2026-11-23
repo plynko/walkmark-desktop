@@ -81,7 +81,7 @@ pub fn prepare(
             let path = frames.join(&step.frame);
             match imaging::load(&path) {
                 Ok(img) => {
-                    let img = imaging::apply_annotations(img, &step.annotations);
+                    let img = imaging::render_frame(img, &step.annotations, step.crop);
                     let img = imaging::fit_width(img, options.image_width);
                     Some(RenderedImage {
                         width: img.width(),

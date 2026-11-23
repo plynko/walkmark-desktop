@@ -14,7 +14,7 @@ export interface CaptureSource {
   thumbnail: string | null;
 }
 
-export type AnnotationKind = "blur" | "redact" | "highlight";
+export type AnnotationKind = "blur" | "redact" | "highlight" | "mouse";
 
 /** Normalised 0..1 coordinates, so annotations survive any resize. */
 export interface Rect {
@@ -47,6 +47,7 @@ export interface Step {
   frame: string;
   alternates: string[];
   annotations: Annotation[];
+  crop?: Rect | null;
   include: boolean;
   /** Set once a human edits the text; "rewrite everything" then skips it. */
   locked: boolean;
@@ -68,6 +69,7 @@ export interface Project {
   /** Language the AI should write this document in. */
   language: string;
   steps: Step[];
+  deletedSteps?: { index: number; step: Step }[];
 }
 
 export interface ProjectSummary {

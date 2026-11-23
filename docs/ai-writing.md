@@ -67,7 +67,7 @@ Remove a key by clearing the field and saving, or delete the credentials file wh
 | --- | --- |
 | **Write N steps** | Some steps are still empty |
 | **Rewrite** (toolbar) | Regenerate every **unlocked** step |
-| **Sparkles** (one step) | Fix a single step after editing the outline |
+| **Sparkles** (one step) | Polish the existing title and instructions, or write a first draft if the step is empty |
 
 Progress events update step cards live. Failed steps show the provider error on the card.
 

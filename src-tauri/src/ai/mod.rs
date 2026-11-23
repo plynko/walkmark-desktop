@@ -11,7 +11,7 @@ use tokio::sync::Semaphore;
 
 use crate::error::{AppError, Result};
 use crate::imaging;
-use crate::models::{GenerationProgress, Project, Settings, Step, StepStatus};
+use crate::models::{GenerationProgress, Project, Rect, Settings, Step, StepStatus};
 use crate::state::AppState;
 use crate::storage;
 
@@ -242,7 +242,8 @@ pub async fn run(
     let permits = Arc::new(Semaphore::new(concurrency));
     let mut set = tokio::task::JoinSet::new();
 
-    for step_id in targets.clone() {
+    let mut step_inputs = std::collections::HashMap::new();
+    for step_id in targets {
         let Some((position, step)) = position_of(&state, &step_id) else {
             continue;
         };
@@ -268,20 +269,26 @@ pub async fn run(
             .cloned()
             .collect();
 
+        let draft = (matches!(scope, Scope::Only(_))
+            && (!step.title.trim().is_empty() || !step.body.trim().is_empty()))
+        .then_some((step.title.as_str(), step.body.as_str()));
         let text_prompt = prompt::step_prompt(
             position,
             included.len().max(1),
             &task_title,
             &planned_title(&step_id),
             &preceding,
+            draft,
         );
+        step_inputs.insert(step_id.clone(), (step.title, step.body));
 
         let client = Arc::clone(&client);
         let permits = Arc::clone(&permits);
         let cancel = Arc::clone(&cancel);
         let system = system.clone();
         let frame_path = frames_dir.join(&step.frame);
-        let annotations = step.annotations.clone();
+        let annotations = step.annotations;
+        let crop = step.crop;
 
         set.spawn(async move {
             let _permit = permits.acquire().await;
@@ -294,7 +301,7 @@ pub async fn run(
             } else {
                 STEP_IMAGE_WIDTH
             };
-            let image = match prepare_image(&frame_path, &annotations, width) {
+            let image = match prepare_image(&frame_path, &annotations, crop, width) {
                 Ok(bytes) => bytes,
                 Err(e) => return (step_id, Err(e)),
             };
@@ -322,11 +329,9 @@ pub async fn run(
             };
             match result {
                 Ok(text) => {
-                    step.title = text.title.trim().trim_end_matches('.').to_string();
-                    step.body = text.body.trim().to_string();
-                    step.status = StepStatus::Ready;
-                    step.error = None;
-                    step.locked = false;
+                    if let Some(source) = step_inputs.remove(&step_id) {
+                        apply_written_step(step, source, text);
+                    }
                 }
                 Err(AppError::Cancelled) => {
                     step.status = StepStatus::Draft;
@@ -361,6 +366,66 @@ pub async fn run(
     emit_progress(&app, done, total, false, None);
     emit_done(&app, cancelled, done.saturating_sub(failed), failed);
     Ok(())
+}
+
+fn apply_written_step(step: &mut Step, source: (String, String), text: provider::StepText) {
+    // Leave edits made after the request started in place.
+    if step.title == source.0 && step.body == source.1 {
+        let title = text.title.trim().trim_end_matches('.').trim_end();
+        let body = text.body.trim();
+        if !title.is_empty() {
+            step.title = title.to_owned();
+        }
+        if !body.is_empty() {
+            step.body = body.to_owned();
+        }
+    }
+    step.status = StepStatus::Ready;
+    step.error = None;
+}
+
+#[cfg(test)]
+mod step_polish_tests {
+    use super::*;
+
+    #[test]
+    fn polishing_keeps_locked_steps_and_does_not_clear_an_empty_response_field() {
+        let mut step = Step::new("frame.png".into(), 0, true);
+        step.title = "Job settings".into();
+        step.body = "Use Q4-EMEA and leave retries off.".into();
+        step.locked = true;
+        let source = (step.title.clone(), step.body.clone());
+
+        apply_written_step(
+            &mut step,
+            source,
+            provider::StepText {
+                title: "Configure the job.".into(),
+                body: String::new(),
+            },
+        );
+        assert_eq!(step.title, "Configure the job");
+        assert_eq!(step.body, "Use Q4-EMEA and leave retries off.");
+        assert!(step.locked);
+    }
+
+    #[test]
+    fn an_ai_response_does_not_overwrite_more_recent_edits() {
+        let mut step = Step::new("frame.png".into(), 0, true);
+        step.title = "Configure the job".into();
+        let source = (step.title.clone(), step.body.clone());
+        step.body = "New note: keep retries off.".into();
+        apply_written_step(
+            &mut step,
+            source,
+            provider::StepText {
+                title: "Configure retries".into(),
+                body: "Enable retries.".into(),
+            },
+        );
+        assert_eq!(step.title, "Configure the job");
+        assert_eq!(step.body, "New note: keep retries off.");
+    }
 }
 
 fn select_targets(project: &Project, scope: &Scope) -> Vec<String> {
@@ -409,6 +474,7 @@ async fn build_outline(
         images.push(prepare_image(
             &frames_dir.join(&step.frame),
             &step.annotations,
+            step.crop,
             OUTLINE_IMAGE_WIDTH,
         )?);
     }
@@ -433,12 +499,13 @@ async fn build_outline(
 fn prepare_image(
     path: &std::path::Path,
     annotations: &[crate::models::Annotation],
+    crop: Option<Rect>,
     width: u32,
 ) -> Result<provider::InlineImage> {
     let image = imaging::load(path)?;
     // Annotations are burned in first so redacted regions never leave the
     // machine, then the result is shrunk for the request.
-    let image = imaging::apply_annotations(image, annotations);
+    let image = imaging::render_frame(image, annotations, crop);
     let image = imaging::fit_width(image, width);
     Ok(provider::InlineImage(imaging::encode_jpeg(&image, 82)?))
 }

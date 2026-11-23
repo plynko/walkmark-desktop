@@ -51,6 +51,8 @@ pub enum AnnotationKind {
     Redact,
     /// Draw an accent outline to draw the eye.
     Highlight,
+    /// Mark a click with a pointer and a translucent halo.
+    Mouse,
 }
 
 /// Rectangle in normalized (0..1) image space so annotations survive
@@ -132,6 +134,9 @@ pub struct Step {
     pub alternates: Vec<String>,
     #[serde(default)]
     pub annotations: Vec<Annotation>,
+    /// Visible region in the original frame. The original file stays intact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub crop: Option<Rect>,
     #[serde(default = "default_true")]
     pub include: bool,
     /// Set once a human edits the text — regeneration then skips this step
@@ -160,6 +165,7 @@ impl Step {
             frame,
             alternates: Vec::new(),
             annotations: Vec::new(),
+            crop: None,
             include: true,
             locked: false,
             status: StepStatus::Draft,
@@ -290,6 +296,12 @@ fn default_language() -> String {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeletedStep {
+    pub index: usize,
+    pub step: Step,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
     pub id: String,
@@ -310,6 +322,8 @@ pub struct Project {
     pub language: String,
     #[serde(default)]
     pub steps: Vec<Step>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deleted_steps: Vec<DeletedStep>,
 }
 
 impl Project {
@@ -325,11 +339,117 @@ impl Project {
             product_id: None,
             language: default_language(),
             steps: Vec::new(),
+            deleted_steps: Vec::new(),
         }
     }
 
     pub fn touch(&mut self) {
         self.updated_at = now();
+    }
+
+    pub fn insert_manual_step(&mut self, frame: String, after_step_id: Option<&str>) -> String {
+        let index = after_step_id
+            .and_then(|id| self.steps.iter().position(|step| step.id == id))
+            .map_or(self.steps.len(), |index| index + 1);
+        let offset = if index == 0 {
+            0
+        } else {
+            self.steps[index - 1].offset_ms
+        };
+        let step = Step::new(frame, offset, true);
+        let id = step.id.clone();
+        self.steps.insert(index, step);
+        id
+    }
+
+    pub fn delete_steps(&mut self, ids: &[String]) -> bool {
+        let mut index = 0;
+        let mut deleted = Vec::new();
+        self.steps.retain(|step| {
+            let remove = ids.contains(&step.id);
+            if remove {
+                deleted.push(DeletedStep {
+                    index,
+                    step: step.clone(),
+                });
+            }
+            index += 1;
+            !remove
+        });
+        if deleted.is_empty() {
+            return false;
+        }
+        self.deleted_steps = deleted;
+        true
+    }
+
+    pub fn undo_step_deletion(&mut self) -> bool {
+        if self.deleted_steps.is_empty() {
+            return false;
+        }
+        for DeletedStep { index, mut step } in std::mem::take(&mut self.deleted_steps) {
+            if matches!(step.status, StepStatus::Queued | StepStatus::Generating) {
+                step.status = if step.body.is_empty() {
+                    StepStatus::Draft
+                } else {
+                    StepStatus::Ready
+                };
+            }
+            self.steps.insert(index.min(self.steps.len()), step);
+        }
+        true
+    }
+}
+
+#[cfg(test)]
+mod project_step_tests {
+    use super::*;
+
+    #[test]
+    fn inserts_a_manual_draft_after_the_anchor_or_at_the_end() {
+        let mut project = Project::new("Guide", "Window");
+        let first = Step::new("first.png".into(), 100, false);
+        let last = Step::new("last.png".into(), 200, false);
+        let first_id = first.id.clone();
+        let last_id = last.id.clone();
+        project.steps.extend([first, last]);
+
+        let inserted = project.insert_manual_step("import.png".into(), Some(&first_id));
+        let appended = project.insert_manual_step("end.png".into(), None);
+        let order: Vec<&str> = project.steps.iter().map(|step| step.id.as_str()).collect();
+        assert_eq!(order, [&first_id, &inserted, &last_id, &appended]);
+        let step = &project.steps[1];
+        assert!(step.manual);
+        assert_eq!(step.status, StepStatus::Draft);
+        assert_eq!(step.frame, "import.png");
+        assert_eq!(step.offset_ms, 100);
+    }
+
+    #[test]
+    fn restores_the_latest_deletion_in_order_after_reloading() {
+        let mut project = Project::new("Guide", "Window");
+        project.steps = (0..5)
+            .map(|i| {
+                let mut step = Step::new(format!("{i}.png"), i, false);
+                step.title = format!("Step {i}");
+                step.alternates.push(format!("{i}-alternate.png"));
+                step
+            })
+            .collect();
+        let original = project.steps.clone();
+
+        assert!(project.delete_steps(&[original[0].id.clone()]));
+        assert!(project.delete_steps(&[original[2].id.clone(), original[4].id.clone()]));
+        assert!(!project.delete_steps(&["missing".into()]));
+        let saved = serde_json::to_string(&project).unwrap();
+        let mut reopened: Project = serde_json::from_str(&saved).unwrap();
+
+        assert!(reopened.undo_step_deletion());
+        assert_eq!(
+            serde_json::to_value(&reopened.steps).unwrap(),
+            serde_json::to_value(&original[1..]).unwrap()
+        );
+        assert!(!reopened.undo_step_deletion());
     }
 }
 

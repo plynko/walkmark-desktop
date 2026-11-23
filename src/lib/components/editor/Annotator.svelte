@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	import type { AnnotationKind, AnnotationStroke } from '$lib/types';
 
-	export type Tool = 'select' | AnnotationKind;
+	export type Tool = 'select' | 'crop' | AnnotationKind;
 
 	export const TOOLS: {
 		value: Tool;
@@ -14,7 +14,7 @@
 			value: 'select',
 			label: 'Select',
 			icon: 'lucide:mouse-pointer-2',
-			hint: 'Select, move, or delete a region',
+			hint: 'Click to select an annotation, or drag to move it',
 			shortcut: 'V'
 		},
 		{
@@ -37,12 +37,26 @@
 			icon: 'lucide:highlighter',
 			hint: 'Draw a coloured box around something',
 			shortcut: 'H'
+		},
+		{
+			value: 'crop',
+			label: 'Crop',
+			icon: 'lucide:crop',
+			hint: 'Drag over the area to keep, then apply the crop',
+			shortcut: 'C'
+		},
+		{
+			value: 'mouse',
+			label: 'Cursor',
+			icon: 'lucide:mouse-pointer-2',
+			hint: 'Click to place the cursor tip inside a yellow halo',
+			shortcut: 'M'
 		}
 	];
 </script>
 
 <script lang="ts">
-	import Icon from '@iconify/svelte';
+	import mouseMarker from '$lib/assets/mouse-marker.png';
 	import type { Annotation, Rect } from '$lib/types';
 	import { cn } from '$lib/utils';
 	import {
@@ -55,17 +69,25 @@
 	let {
 		annotations,
 		tool,
+		editable = true,
 		color,
 		stroke = 'medium',
+		visibleRegion,
+		cropSelection,
+		onCropSelect,
 		selected = $bindable<string | null>(null),
 		onChange,
 		class: className = ''
 	}: {
 		annotations: Annotation[];
 		tool: Tool;
+		editable?: boolean;
 		/** Colour applied to newly drawn highlight / cover regions. */
 		color?: string;
 		stroke?: AnnotationStroke;
+		visibleRegion?: Rect | null;
+		cropSelection?: Rect | null;
+		onCropSelect?: (rect: Rect) => void;
 		selected?: string | null;
 		onChange: (annotations: Annotation[]) => void;
 		class?: string;
@@ -76,23 +98,20 @@
 	let surfaceRef = $state<HTMLDivElement | null>(null);
 	let draft = $state<Rect | null>(null);
 	let origin = $state<{ x: number; y: number } | null>(null);
+	let gesture = $state<{ id: number; tool: Tool; annotation?: Annotation } | null>(null);
 
-	$effect(() => {
-		if (tool !== 'select') selected = null;
+	const visibleAnnotations = $derived.by(() => {
+		const view = visibleRegion;
+		if (!view) return annotations;
+		return annotations.filter(({ rect }) =>
+			rect.x < view.x + view.w && rect.x + rect.w > view.x &&
+			rect.y < view.y + view.h && rect.y + rect.h > view.y
+		);
 	});
 
 	$effect(() => {
-		if (!selected) return;
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key !== 'Backspace' && event.key !== 'Delete') return;
-			const target = event.target as HTMLElement | null;
-			if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
-			event.preventDefault();
-			onChange(annotations.filter((a) => a.id !== selected));
-			selected = null;
-		};
-		window.addEventListener('keydown', onKey);
-		return () => window.removeEventListener('keydown', onKey);
+		if (tool !== 'select') selected = null;
+		cancelGesture();
 	});
 
 	function toLocal(event: PointerEvent) {
@@ -108,19 +127,43 @@
 	}
 
 	function onPointerDown(event: PointerEvent) {
+		if (!editable || event.button !== 0 || !event.isPrimary || gesture) return;
 		if (tool === 'select') {
-			selected = null;
-			return;
+			const id = (event.target as Element).closest('[data-annotation-id]')?.getAttribute('data-annotation-id');
+			const annotation = visibleAnnotations.find((item) => item.id === id);
+			selected = annotation?.id ?? null;
+			if (!annotation) return;
+			gesture = { id: event.pointerId, tool, annotation };
+		} else {
+			gesture = { id: event.pointerId, tool };
 		}
 		event.preventDefault();
-		(event.target as HTMLElement).setPointerCapture(event.pointerId);
+		surfaceRef?.setPointerCapture(event.pointerId);
 		origin = toLocal(event);
-		draft = { ...origin, w: 0, h: 0 };
+		if (tool !== 'mouse' && tool !== 'select') draft = { ...origin, w: 0, h: 0 };
 	}
 
 	function onPointerMove(event: PointerEvent) {
-		if (!origin) return;
+		if (!origin || gesture?.id !== event.pointerId || gesture.tool === 'mouse') return;
 		const point = toLocal(event);
+		if (gesture.annotation && surfaceRef) {
+			const { kind, rect } = gesture.annotation;
+			const dx = point.x - origin.x;
+			const dy = point.y - origin.y;
+			const box = surfaceRef.getBoundingClientRect();
+			if (Math.hypot(dx * box.width, dy * box.height) < 3) {
+				draft = null;
+				return;
+			}
+			const offsetX = kind === 'mouse' ? rect.w / 2 : 0;
+			const offsetY = kind === 'mouse' ? rect.h / 2 : 0;
+			draft = {
+				...rect,
+				x: Math.max(-offsetX, Math.min(1 - rect.w + offsetX, rect.x + dx)),
+				y: Math.max(-offsetY, Math.min(1 - rect.h + offsetY, rect.y + dy))
+			};
+			return;
+		}
 		draft = {
 			x: Math.min(origin.x, point.x),
 			y: Math.min(origin.y, point.y),
@@ -129,12 +172,42 @@
 		};
 	}
 
-	function onPointerUp() {
-		const rect = draft;
+	function cancelGesture() {
+		gesture = null;
 		origin = null;
 		draft = null;
-		if (!rect || tool === 'select') return;
-		if (rect.w < MIN_SIZE || rect.h < MIN_SIZE) return;
+	}
+
+	function onPointerUp(event: PointerEvent) {
+		if (gesture?.id !== event.pointerId || gesture.tool !== tool) return;
+		onPointerMove(event);
+		let rect = draft;
+		const start = origin;
+		const moved = gesture.annotation;
+		cancelGesture();
+		if (tool === 'select') {
+			if (moved && rect) {
+				const movedRect = rect;
+				onChange(annotations.map((annotation) =>
+					annotation.id === moved.id ? { ...annotation, rect: movedRect } : annotation
+				));
+			}
+			return;
+		}
+		if (tool === 'mouse' && start && surfaceRef) {
+			const box = surfaceRef.getBoundingClientRect();
+			const point = toLocal(event);
+			if (Math.hypot((point.x - start.x) * box.width, (point.y - start.y) * box.height) > 8) return;
+			const size = Math.min(44, Math.min(box.width, box.height) * 0.15);
+			const w = size / box.width;
+			const h = size / box.height;
+			rect = { x: point.x - w / 2, y: point.y - h / 2, w, h };
+		}
+		if (!rect || (tool !== 'mouse' && (rect.w < MIN_SIZE || rect.h < MIN_SIZE))) return;
+		if (tool === 'crop') {
+			onCropSelect?.(rect);
+			return;
+		}
 
 		const kind = tool;
 		const next: Annotation = {
@@ -153,56 +226,62 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	bind:this={surfaceRef}
+	data-slot="annotation-surface"
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
-	onpointercancel={onPointerUp}
+	onpointercancel={(event) => {
+		if (gesture?.id === event.pointerId) cancelGesture();
+	}}
 	class={cn(
 		'absolute inset-0',
-		tool === 'select' ? 'pointer-events-none' : 'cursor-crosshair',
+		!editable ? 'pointer-events-none' : tool === 'select' ? 'touch-none' : 'cursor-crosshair touch-none',
 		className
 	)}
 >
-	{#each annotations as annotation (annotation.id)}
+	{#each visibleAnnotations as annotation (annotation.id)}
 		{@const isSelected = selected === annotation.id}
-		{@const interactive = tool === 'select'}
-		{#if interactive}
-			<div
-				role="button"
-				tabindex="0"
-				onpointerdown={(event) => {
-					event.stopPropagation();
-					selected = annotation.id;
-				}}
-				style="{toStyle(annotation.rect)};{annotationStyle(annotation) ?? ''}"
+		{@const rect = gesture?.annotation?.id === annotation.id && draft ? draft : annotation.rect}
+		{#if editable && tool === 'select'}
+			<button
+				type="button"
+				data-annotation-id={annotation.id}
+				aria-pressed={isSelected}
+				aria-label={annotation.kind === 'mouse' ? 'Cursor marker' : `${annotation.kind} annotation`}
+				onclick={() => (selected = annotation.id)}
+				style="{toStyle(rect)};{annotationStyle(annotation) ?? ''}"
 				class={cn(
 					annotationClasses(annotation, isSelected),
-					'pointer-events-auto cursor-pointer'
+					'cursor-grab active:cursor-grabbing'
 				)}
 			>
-				<button
-					type="button"
-					onpointerdown={(event) => {
-						event.stopPropagation();
-						onChange(annotations.filter((a) => a.id !== annotation.id));
-						selected = null;
-					}}
-					aria-label="Remove this annotation"
-					class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-				>
-					<Icon icon="lucide:trash-2" class="size-2.5" aria-hidden="true" />
-				</button>
-			</div>
+				{#if annotation.kind === 'mouse'}
+					<img src={mouseMarker} alt="" class="pointer-events-none absolute inset-0 size-full" />
+				{/if}
+			</button>
 		{:else}
 			<div
 				aria-hidden="true"
 				style="{toStyle(annotation.rect)};{annotationStyle(annotation) ?? ''}"
 				class={cn(annotationClasses(annotation, isSelected), 'pointer-events-none')}
-			></div>
+			>
+				{#if annotation.kind === 'mouse'}
+					<img src={mouseMarker} alt="" class="absolute inset-0 size-full" />
+				{/if}
+			</div>
 		{/if}
 	{/each}
 
-	{#if draft && tool !== 'select'}
+	{#if tool === 'crop'}
+		{@const region = draft ?? cropSelection}
+		{#if region}
+			<div
+				aria-hidden="true"
+				class="pointer-events-none absolute border-2 border-white shadow-[0_0_0_200vmax_#0009]"
+				style={toStyle(region)}
+			></div>
+		{/if}
+	{:else if draft && tool !== 'select'}
 		<div
 			class={cn(
 				'pointer-events-none absolute rounded-[3px] border-2',

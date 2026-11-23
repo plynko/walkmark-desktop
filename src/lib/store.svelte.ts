@@ -64,6 +64,8 @@ class AppStore {
   project = $state<Project | null>(null);
   selection = $state<string[]>([]);
   focused = $state<string | null>(null);
+  stepDeletionPending = $state(false);
+  stepImportPending = $state(false);
   recording = $state<RecordingTick | null>(null);
   /** True while stop_recording is in flight (main window). */
   stoppingRecording = $state(false);
@@ -576,35 +578,84 @@ class AppStore {
     this.selection = [];
   }
 
+  async importStep() {
+    const projectId = this.project?.id;
+    if (!projectId || this.recording || this.stepImportPending || this.stepDeletionPending) return;
+    const afterStepId = this.focused && this.selection.includes(this.focused) ? this.focused : null;
+    this.stepImportPending = true;
+    try {
+      const imported = await api.importStep(projectId, afterStepId);
+      if (imported && this.project?.id === projectId) {
+        this.project = imported.project;
+        this.selection = [];
+        this.focused = imported.stepId;
+      }
+    } catch (error) {
+      this.reportError(error, "Could not add the screenshot");
+    } finally {
+      this.stepImportPending = false;
+    }
+  }
+
   async patchStep(id: string, patch: api.StepPatch) {
     const project = this.project;
-    if (!project) return;
+    if (!project) return false;
     this.project = {
       ...project,
       steps: project.steps.map((s) => (s.id === id ? { ...s, ...patch } : s)),
     };
     try {
       const updated = await api.updateStep(id, patch);
-      if (this.project) {
+      if (this.project?.id === project.id) {
         this.project = {
           ...this.project,
           steps: this.project.steps.map((step) => (step.id === id ? updated : step)),
         };
       }
+      return true;
     } catch (error) {
       this.reportError(error);
+      return false;
     }
   }
 
   async removeSteps(ids: string[]) {
-    if (ids.length === 0) return;
+    const projectId = this.project?.id;
+    if (!projectId || ids.length === 0 || this.stepDeletionPending) return;
+    this.stepDeletionPending = true;
     try {
       const project = await api.deleteSteps(ids);
+      if (this.project?.id !== projectId) return;
       this.project = project;
       this.selection = [];
-      this.focused = project.steps[0]?.id ?? null;
+      if (!project.steps.some((step) => step.id === this.focused)) {
+        this.focused = null;
+      }
+      const count = project.deletedSteps?.length ?? 0;
+      if (count > 0) {
+        toast(`Deleted ${count} ${count === 1 ? "step" : "steps"}`, {
+          id: `step-deletion-${projectId}`,
+          action: { label: "Undo", onClick: () => void this.undoStepDeletion(projectId) },
+        });
+      }
     } catch (error) {
       this.reportError(error);
+    } finally {
+      this.stepDeletionPending = false;
+    }
+  }
+
+  async undoStepDeletion(projectId = this.project?.id) {
+    if (!projectId || this.project?.id !== projectId || this.stepDeletionPending) return;
+    this.stepDeletionPending = true;
+    try {
+      const project = await api.undoStepDeletion(projectId);
+      if (this.project?.id === projectId) this.project = project;
+      toast.dismiss(`step-deletion-${projectId}`);
+    } catch (error) {
+      this.reportError(error, "Could not restore the deleted steps");
+    } finally {
+      this.stepDeletionPending = false;
     }
   }
 

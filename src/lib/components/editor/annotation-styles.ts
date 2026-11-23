@@ -54,7 +54,7 @@ export function annotationClasses(annotation: Annotation, selected = false): str
 	}
 
 	if (selected) {
-		parts.push('ring-2 ring-(--text) ring-offset-1 ring-offset-black/20');
+		parts.push('z-10 ring-2 ring-white ring-offset-2 ring-offset-black/70');
 	}
 
 	return parts.join(' ');

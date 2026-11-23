@@ -11,6 +11,7 @@
 	import Annotator, { TOOLS, type Tool } from './Annotator.svelte';
 	import FrameImage from './FrameImage.svelte';
 	import ImageEditorOverlay from './ImageEditorOverlay.svelte';
+	import ScreenshotViewport from './ScreenshotViewport.svelte';
 	import * as api from '$lib/api';
 
 	let { step, index }: { step: Step; index: number } = $props();
@@ -20,6 +21,7 @@
 	const selected = $derived(store.selection.includes(step.id));
 	const writing = $derived(step.status === 'queued' || step.status === 'generating');
 	const ready = $derived(store.canWriteWith(store.writeProvider) && Boolean(store.writeModel));
+	const hasDraft = $derived(Boolean(step.title.trim() || step.body.trim()));
 
 	const number = $derived(
 		project.steps.slice(0, index + 1).filter((s) => s.include).length
@@ -47,6 +49,46 @@
 	let bodyDraft = $state('');
 	let bodyEditing = $state(false);
 	let bodyRef = $state<HTMLTextAreaElement | null>(null);
+	let textSave = Promise.resolve(true);
+	let startingRewrite = $state(false);
+
+	function saveText(patch: Pick<api.StepPatch, 'title' | 'body'>) {
+		const projectId = project.id;
+		const stepId = step.id;
+		textSave = textSave.then(() => {
+			if (store.project?.id !== projectId) return false;
+			return store.patchStep(stepId, patch);
+		});
+	}
+
+	function finishTitle() {
+		if (!titleEditing) return;
+		titleEditing = false;
+		if (titleDraft.trim() !== step.title) saveText({ title: titleDraft.trim() });
+	}
+
+	function finishBody() {
+		if (!bodyEditing) return;
+		bodyEditing = false;
+		if (bodyDraft.trim() !== step.body) saveText({ body: bodyDraft.trim() });
+	}
+
+	async function rewriteStep() {
+		if (startingRewrite) return;
+		startingRewrite = true;
+		const projectId = project.id;
+		const stepId = step.id;
+		try {
+			finishTitle();
+			finishBody();
+			const saved = await textSave;
+			if (saved && store.project?.id === projectId && store.project.steps.some((s) => s.id === stepId)) {
+				await store.runGeneration('only', [stepId]);
+			}
+		} finally {
+			startingRewrite = false;
+		}
+	}
 
 	$effect(() => {
 		if (!titleEditing) titleDraft = step.title;
@@ -116,10 +158,7 @@
 					maxlength={LIMITS.stepTitle}
 					placeholder="Name this step"
 					onfocus={() => (titleEditing = true)}
-					onblur={() => {
-						titleEditing = false;
-						if (titleDraft.trim() !== step.title) patchStep({ title: titleDraft.trim() });
-					}}
+					onblur={finishTitle}
 					onkeydown={(e) => {
 						if (e.key === 'Enter') e.currentTarget.blur();
 						if (e.key === 'Escape') {
@@ -138,10 +177,7 @@
 						? 'Describe what the reader should do — or have it written for you.'
 						: 'Describe what the reader should do here.'}
 					onfocus={() => (bodyEditing = true)}
-					onblur={() => {
-						bodyEditing = false;
-						if (bodyDraft.trim() !== step.body) patchStep({ body: bodyDraft.trim() });
-					}}
+					onblur={finishBody}
 					onkeydown={(e) => {
 						if (e.key === 'Escape') {
 							bodyDraft = step.body;
@@ -174,9 +210,10 @@
 			<Button
 				size="icon"
 				variant="ghost"
-				aria-label="Rewrite this step"
-				disabled={writing || !ready}
-				onclick={() => void store.runGeneration('only', [step.id])}
+				aria-label={hasDraft ? 'Polish this step with AI' : 'Write this step with AI'}
+				title={hasDraft ? 'Polish this step with AI' : 'Write this step with AI'}
+				disabled={writing || startingRewrite || !ready}
+				onclick={() => void rewriteStep()}
 			>
 				<Icon icon="lucide:sparkles" class="size-3.5" />
 			</Button>
@@ -185,6 +222,8 @@
 				variant="ghost"
 				aria-label="Delete this step"
 				class="hover:text-red-500"
+				disabled={store.stepDeletionPending}
+				onpointerdown={(event) => event.stopPropagation()}
 				onclick={() => void store.removeSteps([step.id])}
 			>
 				<Icon icon="lucide:trash-2" class="size-3.5" />
@@ -201,7 +240,8 @@
 			<Button
 				size="sm"
 				variant="ghost"
-				onclick={() => void store.runGeneration('only', [step.id])}
+				disabled={startingRewrite}
+				onclick={() => void rewriteStep()}
 			>
 				<Icon icon="lucide:refresh-cw" class="size-3" />
 				Retry
@@ -213,29 +253,31 @@
 		<div class="relative">
 			<div class="relative overflow-hidden rounded-2xl bg-(--text)/5">
 				{#if frameUrl}
-					<button
-						type="button"
-						onclick={() => openImageEditor()}
-						class="group/image block w-full cursor-zoom-in text-left"
-						aria-label="Open screenshot editor"
+					<ScreenshotViewport
+						src={frameUrl}
+						alt="Screenshot for step: {step.title || 'untitled'}"
+						crop={step.crop}
+						maxHeight={step.crop ? '65vh' : undefined}
+						class="mx-auto"
 					>
-						<img
-							src={frameUrl}
-							alt="Screenshot for step: {step.title || 'untitled'}"
-							draggable={false}
-							class="block w-full"
+						<button
+							type="button"
+							onclick={() => openImageEditor()}
+							class="absolute inset-0 cursor-zoom-in"
+							aria-label="Open screenshot editor"
+						></button>
+						<Annotator
+							annotations={step.annotations}
+							tool="select"
+							editable={false}
+							visibleRegion={step.crop}
+							onChange={(annotations) => patchStep({ annotations })}
 						/>
-					</button>
+					</ScreenshotViewport>
 				{:else}
 					<Skeleton class="aspect-16/10 w-full rounded-none" />
 				{/if}
 
-				<Annotator
-					annotations={step.annotations}
-					tool="select"
-					onChange={(annotations) => patchStep({ annotations })}
-					class="pointer-events-none"
-				/>
 			</div>
 
 			<div
@@ -352,8 +394,10 @@
 			{frameUrl}
 			title={step.title}
 			annotations={step.annotations}
+			crop={step.crop}
 			bind:tool
 			onChange={(annotations) => patchStep({ annotations })}
+			onCropChange={(crop) => patchStep({ crop })}
 			onClose={closeImageEditor}
 		/>
 	</div>

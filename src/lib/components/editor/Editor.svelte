@@ -12,18 +12,24 @@
 	const recording = $derived(store.recording);
 	const selection = $derived(store.selection);
 
-	let scrolledTo = $state<string | null>(null);
+	const isRecording = $derived(Boolean(recording));
 	const lastStepId = $derived(project?.steps.at(-1)?.id ?? null);
+	const stepCount = $derived(project?.steps.length ?? 0);
+	let previousStepCount = 0;
+	let wasRecording = false;
 
 	$effect(() => {
-		if (!focused || scrolledTo === focused) return;
-		scrolledTo = focused;
+		if (!focused) return;
 		document.getElementById(`step-${focused}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 	});
 
 	$effect(() => {
-		if (!recording || !lastStepId) return;
-		document.getElementById(`step-${lastStepId}`)?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+		const shouldFollow = isRecording && (!wasRecording || stepCount > previousStepCount);
+		wasRecording = isRecording;
+		previousStepCount = stepCount;
+		if (shouldFollow && lastStepId) {
+			document.getElementById(`step-${lastStepId}`)?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+		}
 	});
 </script>
 
@@ -58,11 +64,15 @@
 							<div>
 								<p class="text-[15px] font-semibold">This document has no steps</p>
 								<p class="mt-1.5 max-w-sm text-[13px] leading-relaxed text-(--text)/56">
-									Record the workflow again — Walkmark captures a step each time the screen
-									changes meaningfully.
+									Add a screenshot or record the workflow to create steps.
 								</p>
 							</div>
-							<Button onclick={() => store.setDialog('sources')}>Record steps</Button>
+							<div class="flex flex-wrap justify-center gap-2">
+								<Button disabled={store.stepImportPending} onclick={() => void store.importStep()}>
+									Add step
+								</Button>
+								<Button variant="ghost" onclick={() => store.setDialog('sources')}>Record steps</Button>
+							</div>
 						</div>
 					{/if}
 				{:else}
@@ -106,6 +116,7 @@
 					size="sm"
 					variant="ghost"
 					class="hover:text-red-500"
+					disabled={store.stepDeletionPending}
 					onclick={() => void store.removeSteps(selection)}
 				>
 					<Icon icon="lucide:trash-2" class="size-3.5" />

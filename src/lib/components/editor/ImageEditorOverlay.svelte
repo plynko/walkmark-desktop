@@ -1,10 +1,11 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import type { Annotation, AnnotationStroke } from '$lib/types';
+	import type { Annotation, AnnotationStroke, Rect } from '$lib/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { cn } from '$lib/utils';
 	import Annotator, { TOOLS, type Tool } from './Annotator.svelte';
+	import ScreenshotViewport from './ScreenshotViewport.svelte';
 	import { isMacOS } from '$lib/window';
 	import {
 		DEFAULT_HIGHLIGHT,
@@ -19,16 +20,20 @@
 		frameUrl,
 		title = '',
 		annotations,
+		crop,
 		tool = $bindable<Tool>('select'),
 		onChange,
+		onCropChange,
 		onClose
 	}: {
 		open?: boolean;
 		frameUrl: string | null;
 		title?: string;
 		annotations: Annotation[];
+		crop?: Rect | null;
 		tool?: Tool;
 		onChange: (annotations: Annotation[]) => void;
+		onCropChange: (crop: Rect | null) => void;
 		onClose: () => void;
 	} = $props();
 
@@ -38,6 +43,21 @@
 	let highlightColor = $state(DEFAULT_HIGHLIGHT);
 	let redactColor = $state(DEFAULT_REDACT);
 	let stroke = $state<AnnotationStroke>('medium');
+	let cropDraft = $state<Rect | null>(null);
+	let undoHistory = $state<Annotation[][]>([]);
+
+	$effect(() => {
+		if (!open || tool !== 'crop') cropDraft = null;
+		if (!open) {
+			undoHistory = [];
+			selected = null;
+		}
+	});
+
+	function saveCrop(next: Rect | null) {
+		onCropChange(next);
+		tool = 'select';
+	}
 
 	const activeTool = $derived(TOOLS.find((t) => t.value === tool) ?? TOOLS[0]);
 	const activeColor = $derived(
@@ -52,12 +72,15 @@
 	);
 
 	function setAnnotations(next: Annotation[]) {
+		undoHistory = [...undoHistory, annotations];
 		onChange(next);
 	}
 
 	function undo() {
-		if (annotations.length === 0) return;
-		setAnnotations(annotations.slice(0, -1));
+		const previous = undoHistory.at(-1);
+		if (!previous) return;
+		undoHistory = undoHistory.slice(0, -1);
+		onChange(previous);
 		selected = null;
 	}
 
@@ -102,6 +125,7 @@
 		if (!open) return;
 
 		const onKey = (event: KeyboardEvent) => {
+			if (event.defaultPrevented) return;
 			const target = event.target as HTMLElement | null;
 			if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
@@ -171,22 +195,25 @@
 
 		<div class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4 pb-28 sm:p-8 sm:pb-32">
 			{#if frameUrl}
-				<div class="relative inline-block max-h-full max-w-full shadow-2xl shadow-black/20">
-					<img
-						src={frameUrl}
-						alt={title ? `Screenshot for step: ${title}` : 'Screenshot'}
-						draggable={false}
-						class="block max-h-[calc(100vh-180px)] max-w-[min(100%,calc(100vw-2rem))] w-auto rounded-xl"
-					/>
+				<ScreenshotViewport
+					src={frameUrl}
+					alt={title ? `Screenshot for step: ${title}` : 'Screenshot'}
+					crop={tool === 'crop' ? null : crop}
+					maxHeight="max(1px, calc(100dvh - 230px))"
+					class="rounded-xl shadow-2xl shadow-black/20"
+				>
 					<Annotator
 						{annotations}
 						{tool}
 						color={activeColor}
 						{stroke}
+						visibleRegion={tool === 'crop' ? null : crop}
+						cropSelection={cropDraft ?? crop}
+						onCropSelect={(rect) => (cropDraft = rect)}
 						bind:selected
 						onChange={setAnnotations}
 					/>
-				</div>
+				</ScreenshotViewport>
 			{:else}
 				<Skeleton
 					class="aspect-16/10 w-[min(960px,calc(100vw-2rem))] rounded-2xl"
@@ -201,7 +228,7 @@
 				class="pointer-events-auto w-full max-w-3xl rounded-2xl border border-(--text)/10 bg-(--bg-elevated)/95 p-2 shadow-xl shadow-black/15 backdrop-blur-xl sm:p-3"
 			>
 				<div class="flex flex-wrap items-center gap-2">
-					<div class="flex items-center gap-1 rounded-xl bg-(--text)/5 p-1">
+					<div class="flex flex-wrap items-center gap-1 rounded-xl bg-(--text)/5 p-1">
 						{#each TOOLS as t (t.value)}
 							<button
 								type="button"
@@ -217,10 +244,23 @@
 								)}
 							>
 								<Icon icon={t.icon} class="size-4 shrink-0" aria-hidden="true" />
-								<span class="hidden sm:inline">{t.label}</span>
+								<span class={t.value === 'crop' || t.value === 'mouse' ? '' : 'hidden sm:inline'}>
+									{t.label}
+								</span>
 							</button>
 						{/each}
 					</div>
+
+					{#if tool === 'crop'}
+						<div class="flex items-center gap-1">
+							<Button size="sm" disabled={!cropDraft} onclick={() => saveCrop(cropDraft)}>
+								Apply crop
+							</Button>
+							{#if crop}
+								<Button size="sm" variant="ghost" onclick={() => saveCrop(null)}>Reset crop</Button>
+							{/if}
+						</div>
+					{/if}
 
 					{#if showColors}
 						<span class="hidden h-8 w-px bg-(--text)/10 sm:block"></span>
@@ -290,7 +330,7 @@
 								Delete
 							</button>
 						{/if}
-						{#if annotations.length > 0}
+						{#if undoHistory.length > 0}
 							<button
 								type="button"
 								onclick={undo}
@@ -299,6 +339,8 @@
 							>
 								Undo
 							</button>
+						{/if}
+						{#if annotations.length > 0}
 							<button
 								type="button"
 								onclick={clearAll}
@@ -313,7 +355,7 @@
 				<p class="mt-2 px-1 text-[11px] text-(--text)/40">
 					<span class="text-(--text)/55">{activeTool.hint}.</span>
 					<span class="hidden sm:inline">
-						Shortcuts: V select · B blur · R cover · H highlight · ⌘Z undo · Delete removes
+						Shortcuts: V select · B blur · R cover · H highlight · C crop · M cursor · ⌘Z undo · Delete removes
 						selection
 					</span>
 				</p>

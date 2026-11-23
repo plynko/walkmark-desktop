@@ -1,9 +1,9 @@
-use std::path::Path;
+use std::{path::Path, sync::OnceLock};
 
 use image::{Rgba, RgbaImage};
 
-use crate::error::Result;
-use crate::models::{Annotation, AnnotationKind, AnnotationStroke};
+use crate::error::{AppError, Result};
+use crate::models::{Annotation, AnnotationKind, AnnotationStroke, Rect};
 
 /// Walkmark's default accent when no colour is stored on the annotation.
 const HIGHLIGHT: Rgba<u8> = Rgba([99, 102, 241, 255]);
@@ -11,6 +11,17 @@ const REDACT_FILL: Rgba<u8> = Rgba([24, 24, 27, 255]);
 
 pub fn load(path: &Path) -> Result<RgbaImage> {
     Ok(image::open(path)?.to_rgba8())
+}
+
+pub fn load_screenshot(path: &Path) -> Result<RgbaImage> {
+    let reader = image::ImageReader::open(path)?.with_guessed_format()?;
+    if !matches!(
+        reader.format(),
+        Some(image::ImageFormat::Png | image::ImageFormat::Jpeg)
+    ) {
+        return Err(AppError::Invalid("Choose a PNG or JPEG screenshot.".into()));
+    }
+    Ok(reader.decode()?.to_rgba8())
 }
 
 pub fn fit_width(image: RgbaImage, max_w: u32) -> RgbaImage {
@@ -29,10 +40,9 @@ pub fn apply_annotations(mut image: RgbaImage, annotations: &[Annotation]) -> Rg
     let (w, h) = (image.width(), image.height());
     for ann in annotations {
         let (x, y, rw, rh) = ann.rect.to_pixels(w, h);
-        if rw == 0 || rh == 0 {
-            continue;
-        }
         match ann.kind {
+            AnnotationKind::Mouse => draw_mouse(&mut image, ann.rect),
+            _ if rw == 0 || rh == 0 => continue,
             AnnotationKind::Blur => mosaic(&mut image, x, y, rw, rh),
             AnnotationKind::Redact => {
                 let color = annotation_color(ann, REDACT_FILL);
@@ -45,6 +55,39 @@ pub fn apply_annotations(mut image: RgbaImage, annotations: &[Annotation]) -> Rg
                 let stroke = highlight_stroke(w, ann.stroke);
                 outline(&mut image, x, y, rw, rh, color, stroke);
             }
+        }
+    }
+    image
+}
+
+fn draw_mouse(image: &mut RgbaImage, rect: Rect) {
+    static MARKER: OnceLock<RgbaImage> = OnceLock::new();
+    let marker = MARKER.get_or_init(|| {
+        image::load_from_memory_with_format(
+            include_bytes!("../../src/lib/assets/mouse-marker.png"),
+            image::ImageFormat::Png,
+        )
+        .expect("bundled cursor marker is a valid PNG")
+        .into_rgba8()
+    });
+    let (w, h) = (image.width() as f32, image.height() as f32);
+    let size = (rect.w * w).min(rect.h * h).min(w.min(h) * 0.15).round() as u32;
+    if size == 0 {
+        return;
+    }
+    let left = ((rect.x + rect.w / 2.0) * w - size as f32 / 2.0).round() as i64;
+    let top = ((rect.y + rect.h / 2.0) * h - size as f32 / 2.0).round() as i64;
+    let marker = image::imageops::resize(marker, size, size, image::imageops::FilterType::Triangle);
+    image::imageops::overlay(image, &marker, left, top);
+}
+
+/// Render edits in original frame coordinates before cutting the visible region.
+pub fn render_frame(image: RgbaImage, annotations: &[Annotation], crop: Option<Rect>) -> RgbaImage {
+    let mut image = apply_annotations(image, annotations);
+    if let Some(crop) = crop {
+        let (x, y, w, h) = crop.to_pixels(image.width(), image.height());
+        if w > 0 && h > 0 {
+            return image::imageops::crop(&mut image, x, y, w, h).to_image();
         }
     }
     image
@@ -189,7 +232,37 @@ pub fn encode_png(image: &RgbaImage) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Rect;
+
+    #[test]
+    fn crop_keeps_mouse_marker_at_its_original_click_position() {
+        let background = Rgba([28, 48, 68, 255]);
+        let image = RgbaImage::from_pixel(400, 200, background);
+        let marker = Annotation {
+            id: "click".into(),
+            kind: AnnotationKind::Mouse,
+            rect: Rect {
+                x: 0.7225,
+                y: 0.445,
+                w: 0.055,
+                h: 0.11,
+            },
+            color: None,
+            stroke: None,
+        };
+        let crop = Rect {
+            x: 0.5,
+            y: 0.25,
+            w: 0.5,
+            h: 0.5,
+        };
+
+        let output = render_frame(image, &[marker], Some(crop));
+        assert_eq!(output.dimensions(), (200, 100));
+        assert_eq!(*output.get_pixel(0, 0), background);
+        assert_ne!(*output.get_pixel(100, 50), background);
+        let halo = output.get_pixel(94, 50);
+        assert!(halo[0] > background[0] && halo[0] < 255);
+    }
 
     #[test]
     fn highlight_uses_stored_colour_and_fill() {

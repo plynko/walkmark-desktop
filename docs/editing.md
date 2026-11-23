@@ -2,6 +2,8 @@
 
 The editor has a **step rail** on the left and the document on the right. Click a step in the rail to scroll to it; click a step card in the document to select it in the rail.
 
+Click **Home** in the top bar to return to the guide library.
+
 ## Document header
 
 At the top of the document:
@@ -24,11 +26,15 @@ Each step card has:
 
 Click any title or instruction field to edit by hand. Changes save automatically.
 
+### Add a screenshot to an existing guide
+
+Click **Add step** in the step rail and choose a PNG or JPEG. Walkmark saves a copy in the guide and inserts the step after your selection, or at the end if nothing is selected. Write the instructions by hand or use **Write** to draft them.
+
 ### Locked steps
 
 Steps you edit manually are **locked** (lock icon). When you run **Rewrite everything**, locked steps are skipped so your fixes are not overwritten.
 
-Use the **sparkles** button on one step to rewrite just that step — locked or not, depending on whether you changed it after the last write.
+Use the **sparkles** button to polish the text on one step. The AI uses your title and instructions as its draft and the screenshot to clarify details. If the step is empty, it writes a first draft from the screenshot. Polishing a locked step keeps it locked.
 
 ### Write states
 
@@ -55,7 +61,9 @@ When multiple steps are selected, a floating bar offers:
 | --- | --- |
 | **Merge** | Combine selected steps into one (one screenshot, merged context) |
 | **Exclude** | Hide from document and export (frame kept on disk) |
-| **Delete** | Remove steps permanently |
+| **Delete** | Remove the selected steps |
+
+Use **Undo** in the confirmation or **Undo delete** in the step rail to restore the most recent deletion. This works after reopening the guide, too.
 
 There is no **split** — if auto-detection merged actions you wanted separate, delete or re-record.
 
@@ -75,12 +83,17 @@ Open the **image editor** on a step screenshot (pencil icon or click the image):
 
 | Tool | Shortcut | Effect |
 | --- | --- | --- |
-| **Select** | V | Move or delete regions |
+| **Select** | V | Click an annotation to select it, drag to move it, or press **Delete** to remove it |
 | **Blur** | B | Pixelate sensitive details |
 | **Cover** | R | Solid fill over a region |
 | **Highlight** | H | Coloured box around a control |
+| **Crop** | C | Drag over the area to keep, then click **Apply crop** |
+| **Cursor** | M | Place the tip of an arrow cursor at the clicked point, with a translucent yellow halo |
 
-Annotations are **burned into exported images**. Blur secrets before running **Write** so the model does not quote them in text.
+Use **Crop → Reset crop** to restore the full screenshot. The original is kept.
+Use **Undo** to reverse the last annotation change.
+
+The crop and annotations are applied to exported images and to images sent to the model when you run **Write**. Blur or cover sensitive details before writing.
 
 Highlight and Cover support colour and stroke options in the toolbar.
 

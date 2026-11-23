@@ -3,11 +3,13 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_dialog::DialogExt;
 
 use crate::ai;
 use crate::capture::{self, session::Session};
 use crate::error::{AppError, Result};
 use crate::export::{self, ExportOptions, ExportResult};
+use crate::imaging;
 use crate::limits;
 use crate::local;
 use crate::models::*;
@@ -493,6 +495,73 @@ pub fn frame_path(app: AppHandle, project_id: String, frame: String) -> Result<S
 // Steps
 // ---------------------------------------------------------------------------
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportedStep {
+    project: Project,
+    step_id: String,
+}
+
+#[tauri::command]
+pub async fn import_step(
+    app: AppHandle,
+    project_id: String,
+    after_step_id: Option<String>,
+) -> Result<Option<ImportedStep>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = app
+            .dialog()
+            .file()
+            .set_title("Add screenshot to guide")
+            .add_filter("Screenshots", &["png", "jpg", "jpeg"])
+            .blocking_pick_file()
+        else {
+            return Ok(None);
+        };
+        let path = file
+            .into_path()
+            .map_err(|_| AppError::Invalid("Choose a local screenshot file.".into()))?;
+        let image = imaging::load_screenshot(&path)?;
+        let png = imaging::encode_png(&image)?;
+        let state = app.state::<AppState>();
+        if state.session.lock().is_some() {
+            return Err(AppError::AlreadyRecording);
+        }
+        let mut guard = state.project.lock();
+        let project = guard
+            .as_mut()
+            .filter(|project| project.id == project_id)
+            .ok_or_else(|| AppError::NotFound("That guide is no longer open.".into()))?;
+        let frame = format!("manual-{}.png", uuid::Uuid::new_v4().simple());
+        let frame_path = storage::frame_path(&app, &project_id, &frame)?;
+        let mut updated = project.clone();
+        let step_id = updated.insert_manual_step(frame, after_step_id.as_deref());
+        updated.touch();
+        if let Err(error) = std::fs::write(&frame_path, png) {
+            let _ = std::fs::remove_file(&frame_path);
+            return Err(error.into());
+        }
+        if let Err(error) = storage::save_project(&app, &updated) {
+            let _ = std::fs::remove_file(&frame_path);
+            return Err(error);
+        }
+        *project = updated;
+        Ok(Some(ImportedStep {
+            project: project.clone(),
+            step_id,
+        }))
+    })
+    .await
+    .map_err(|error| AppError::Other(error.to_string()))?
+}
+
+fn deserialize_crop_patch<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<Option<Option<Rect>>, D::Error> {
+    // An omitted crop leaves it unchanged; an explicit null resets it.
+    Option::<Rect>::deserialize(deserializer).map(Some)
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StepPatch {
@@ -502,6 +571,8 @@ pub struct StepPatch {
     pub locked: Option<bool>,
     pub frame: Option<String>,
     pub annotations: Option<Vec<Annotation>>,
+    #[serde(default, deserialize_with = "deserialize_crop_patch")]
+    pub crop: Option<Option<Rect>>,
 }
 
 #[tauri::command]
@@ -546,6 +617,9 @@ pub fn update_step(
     if let Some(annotations) = patch.annotations {
         step.annotations = annotations;
     }
+    if let Some(crop) = patch.crop {
+        step.crop = crop;
+    }
     if let Some(locked) = patch.locked {
         step.locked = locked;
     } else if text_edited {
@@ -587,18 +661,41 @@ pub fn reorder_steps(app: AppHandle, state: State<AppState>, order: Vec<String>)
 
 #[tauri::command]
 pub fn delete_steps(app: AppHandle, state: State<AppState>, ids: Vec<String>) -> Result<Project> {
-    let project = {
-        let mut guard = state.project.lock();
-        let project = guard
-            .as_mut()
-            .ok_or_else(|| AppError::NotFound("No document is open.".into()))?;
-        project.steps.retain(|s| !ids.contains(&s.id));
-        project.touch();
-        storage::save_project(&app, project)?;
-        project.clone()
-    };
-    let _ = storage::prune_frames(&app, &project);
-    Ok(project)
+    let recording = state.session.lock().is_some();
+    let mut guard = state.project.lock();
+    let project = guard
+        .as_mut()
+        .ok_or_else(|| AppError::NotFound("No document is open.".into()))?;
+    let mut updated = project.clone();
+    if updated.delete_steps(&ids) {
+        updated.touch();
+        storage::save_project(&app, &updated)?;
+        *project = updated;
+        if !recording {
+            let _ = storage::prune_frames(&app, project);
+        }
+    }
+    Ok(project.clone())
+}
+
+#[tauri::command]
+pub fn undo_step_deletion(
+    app: AppHandle,
+    state: State<AppState>,
+    project_id: String,
+) -> Result<Project> {
+    let mut guard = state.project.lock();
+    let project = guard
+        .as_mut()
+        .filter(|project| project.id == project_id)
+        .ok_or_else(|| AppError::NotFound("That document is no longer open.".into()))?;
+    let mut updated = project.clone();
+    if updated.undo_step_deletion() {
+        updated.touch();
+        storage::save_project(&app, &updated)?;
+        *project = updated;
+    }
+    Ok(project.clone())
 }
 
 /// Folds later steps into the earliest selected one, keeping its screenshot and

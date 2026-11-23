@@ -238,7 +238,11 @@ pub fn list_projects(app: &AppHandle) -> Result<Vec<ProjectSummary>> {
 pub fn prune_frames(app: &AppHandle, project: &Project) -> Result<()> {
     let dir = frames_dir(app, &project.id)?;
     let mut keep = std::collections::HashSet::new();
-    for step in &project.steps {
+    for step in project
+        .steps
+        .iter()
+        .chain(project.deleted_steps.iter().map(|entry| &entry.step))
+    {
         keep.insert(step.frame.clone());
         keep.extend(step.alternates.iter().cloned());
     }

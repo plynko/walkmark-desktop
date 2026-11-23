@@ -3,6 +3,7 @@
 	import type { Step } from '$lib/types';
 	import { store } from '$lib/store.svelte';
 	import { cn } from '$lib/utils';
+	import { Button } from '$lib/components/ui/button';
 	import FrameImage from './FrameImage.svelte';
 
 	const project = $derived(store.project);
@@ -15,10 +16,37 @@
 			<span class="text-[11.5px] font-semibold tracking-wider text-(--text)/40 uppercase">
 				Steps
 			</span>
-			<span class="text-[11.5px] tabular-nums text-(--text)/40">
-				{project.steps.length}
-			</span>
+			<div class="flex items-center gap-2">
+				{#if project.deletedSteps?.length}
+					<Button
+						size="sm"
+						variant="ghost"
+						class="h-7 px-2 text-xs"
+						disabled={store.stepDeletionPending}
+						onclick={() => void store.undoStepDeletion()}
+					>
+						Undo delete
+					</Button>
+				{/if}
+				<span class="text-[11.5px] tabular-nums text-(--text)/40">{project.steps.length}</span>
+			</div>
 		</div>
+
+		{#if !store.recording}
+			<div class="px-3 pb-3">
+				<Button
+					size="sm"
+					variant="ghost"
+					class="w-full"
+					disabled={store.stepImportPending || store.stepDeletionPending}
+					title="Add a screenshot to this guide"
+					onclick={() => void store.importStep()}
+				>
+					<Icon icon="lucide:plus" class="size-3.5" aria-hidden="true" />
+					Add step
+				</Button>
+			</div>
+		{/if}
 
 		<div class="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
 			<ol class="flex flex-col gap-1">
