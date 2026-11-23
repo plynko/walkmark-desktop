@@ -3,6 +3,8 @@
 ## 0.2.4 — unreleased
 
 - Export as Word (.docx): real headings and lists, formatted text, screenshots with annotations and crop applied, translated fixed wording, details line and page numbers.
+- Fixed step thumbnails in the left column disappearing after the guide was edited (renaming, changing the version, AI updates). A picture that cannot be loaded now shows a placeholder instead of an empty box.
+- Changing the default engine or model in Settings now also changes what Write uses; before, Write kept calling the previous provider until the write menu was changed by hand.
 - Rust code formatted with `cargo fmt`.
 - HTTPS now uses the operating system's TLS instead of a bundled crypto library. The Rust code compiles for Windows (x64 and ARM64) from macOS, and Linux builds need `libssl-dev`.
 - An optional test (`RUN_LIVE_TESTS=1`) checks HTTPS against the real provider APIs.

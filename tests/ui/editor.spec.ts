@@ -130,6 +130,45 @@ test.describe("choosing the AI", () => {
   });
 });
 
+test.describe("step thumbnails", () => {
+  // A thumbnail is shown once its picture has loaded; it must stay shown when
+  // the project object is replaced (after any edit, rename or AI update).
+  const thumbnails = (app: { page: import("@playwright/test").Page }) => app.page.locator("aside img");
+
+  test("are visible when the guide opens", async ({ app }) => {
+    await app.openGuide();
+    await expect(thumbnails(app)).toHaveCount(2);
+    for (const image of await thumbnails(app).all()) {
+      await expect(image).toHaveCSS("opacity", "1");
+    }
+  });
+
+  test("stay visible after the project is updated", async ({ app }) => {
+    await app.openGuide();
+    await expect(thumbnails(app)).toHaveCount(2);
+    await expect(thumbnails(app).first()).toHaveCSS("opacity", "1");
+
+    // Any edit makes the app replace the whole project, with new step objects.
+    const version = app.page.getByRole("textbox", { name: "Version", exact: true });
+    await version.fill("2.0");
+    await version.press("Enter");
+    await expect.poll(async () => (await app.calls("update_project_meta")).length).toBe(1);
+
+    for (const image of await thumbnails(app).all()) {
+      await expect(image).toHaveCSS("opacity", "1");
+      expect(await image.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
+    }
+  });
+
+  test("a picture that fails to load shows a placeholder, not an empty box", async ({ app }) => {
+    await app.page.evaluate(() => {
+      (window as any).__TAURI_INTERNALS__.convertFileSrc = () => "data:image/png;base64,AAAA";
+    });
+    await app.openGuide();
+    await expect(app.page.locator("aside [data-slot='skeleton'], aside .animate-pulse").first()).toBeVisible();
+  });
+});
+
 test.describe("settings", () => {
   test("switches the model provider without errors", async ({ app }) => {
     await app.page.getByRole("button", { name: "Settings", exact: true }).click();
