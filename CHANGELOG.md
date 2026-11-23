@@ -3,6 +3,7 @@
 ## 0.2.2 — 2026-11-23
 
 - Highlight an area with a semi-transparent Tint rectangle, or point at it with an Arrow. Both can be recoloured in the editor and are embedded in exported images.
+- Stop writing now interrupts requests that are already running, including the overview pass, and returns unfinished steps to how they were.
 - Projects now record the version of their file format, so future releases can open older guides safely.
 
 ## 0.2.1 — 2026-11-23

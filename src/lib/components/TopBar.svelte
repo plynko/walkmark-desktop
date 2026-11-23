@@ -125,13 +125,16 @@
 				<div class="flex items-center gap-2 rounded-2xl bg-(--text)/5 px-3 py-1.5">
 					<Icon icon="lucide:sparkles" class="size-3.5 animate-pulse text-(--text)/72" />
 					<span class="text-xs font-medium tabular-nums text-(--text)/72">
-						{store.generation.total > 0
-							? `${store.generation.done} of ${store.generation.total}`
-							: (store.generation.message ?? "Starting")}
+						{store.stoppingGeneration
+							? "Stopping…"
+							: store.generation.total > 0
+								? `${store.generation.done} of ${store.generation.total}`
+								: (store.generation.message ?? "Starting")}
 					</span>
 					<button
-						class="grid size-6 place-items-center rounded-xl text-(--text)/56 hover:bg-(--text)/8"
+						class="grid size-6 place-items-center rounded-xl text-(--text)/56 hover:bg-(--text)/8 disabled:opacity-40"
 						aria-label="Stop writing" data-tooltip=""
+						disabled={store.stoppingGeneration}
 						onclick={() => void store.stopGeneration()}
 					>
 						<Icon icon="lucide:x" class="size-3.5" />

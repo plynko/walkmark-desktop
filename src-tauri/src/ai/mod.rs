@@ -2,8 +2,10 @@ pub mod catalog;
 pub mod prompt;
 pub mod provider;
 
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
@@ -152,7 +154,17 @@ pub async fn run(
     // --- Pass 1: understand the whole task -------------------------------
     let write_outline = matches!(scope, Scope::All | Scope::Missing) && total > 1;
     let outline = if write_outline {
-        match build_outline(&client, &system, &project, &frames_dir, local).await {
+        // Dropping the request future closes the connection, so a stop request
+        // ends a long outline call straight away instead of after it finishes.
+        let built = tokio::select! {
+            built = build_outline(&client, &system, &project, &frames_dir, local) => built,
+            () = stop_requested(&cancel) => {
+                emit_progress(&app, 0, total, false, None);
+                emit_done(&app, true, 0, 0);
+                return Ok(());
+            }
+        };
+        match built {
             Ok(o) => Some(o),
             Err(e) => {
                 // An outline is a quality boost, not a requirement — a failure
@@ -231,6 +243,7 @@ pub async fn run(
 
     // --- Pass 2: write each step ----------------------------------------
     mark_queued(&app, &targets);
+    let target_ids = targets.clone();
 
     // One local model serves one request at a time no matter how many we send,
     // so parallelism there only buys queueing and memory pressure.
@@ -313,10 +326,26 @@ pub async fn run(
 
     let mut done = 0usize;
     let mut failed = 0usize;
-    while let Some(joined) = set.join_next().await {
+    let mut finished: HashSet<String> = HashSet::new();
+    let mut stopping = false;
+    loop {
+        let joined = tokio::select! {
+            joined = set.join_next() => joined,
+            // Abort in-flight requests the moment a stop is asked for, rather
+            // than waiting for the slowest one (a local model can take minutes).
+            () = stop_requested(&cancel), if !stopping => {
+                stopping = true;
+                set.abort_all();
+                continue;
+            }
+        };
+        let Some(joined) = joined else {
+            break;
+        };
         let Ok((step_id, result)) = joined else {
             continue;
         };
+        finished.insert(step_id.clone());
         done += 1;
 
         let updated = {
@@ -333,10 +362,7 @@ pub async fn run(
                         apply_written_step(step, source, text);
                     }
                 }
-                Err(AppError::Cancelled) => {
-                    step.status = StepStatus::Draft;
-                    step.error = None;
-                }
+                Err(AppError::Cancelled) => restore_unwritten(step),
                 Err(e) => {
                     failed += 1;
                     step.status = StepStatus::Failed;
@@ -357,15 +383,58 @@ pub async fn run(
             let _ = storage::save_project(&app, project);
         }
 
-        if cancel.load(Ordering::SeqCst) {
-            set.abort_all();
-        }
     }
 
     let cancelled = cancel.load(Ordering::SeqCst);
+    if cancelled {
+        // Aborted requests never report back, so put their steps back
+        // ourselves; otherwise they would stay "queued" forever.
+        release_unfinished(&app, &target_ids, &finished);
+    }
     emit_progress(&app, done, total, false, None);
     emit_done(&app, cancelled, done.saturating_sub(failed), failed);
     Ok(())
+}
+
+/// Resolves once the run has been asked to stop.
+async fn stop_requested(cancel: &AtomicBool) {
+    while !cancel.load(Ordering::SeqCst) {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+/// A step whose request was abandoned goes back to what it was before the run:
+/// untouched if it never had text, otherwise still holding the text it had.
+fn restore_unwritten(step: &mut Step) {
+    step.status = if step.title.trim().is_empty() && step.body.trim().is_empty() {
+        StepStatus::Draft
+    } else {
+        StepStatus::Ready
+    };
+    step.error = None;
+}
+
+fn release_unfinished(app: &AppHandle, targets: &[String], finished: &HashSet<String>) {
+    let state = app.state::<AppState>();
+    let mut guard = state.project.lock();
+    let Some(project) = guard.as_mut() else {
+        return;
+    };
+    let mut changed = false;
+    for step in project.steps.iter_mut() {
+        if targets.contains(&step.id)
+            && !finished.contains(&step.id)
+            && matches!(step.status, StepStatus::Queued | StepStatus::Generating)
+        {
+            restore_unwritten(step);
+            let _ = app.emit(EVT_STEP, &step.clone());
+            changed = true;
+        }
+    }
+    if changed {
+        project.touch();
+        let _ = storage::save_project(app, project);
+    }
 }
 
 fn apply_written_step(step: &mut Step, source: (String, String), text: provider::StepText) {
@@ -565,5 +634,41 @@ mod step_polish_tests {
         );
         assert_eq!(step.title, "Configure the job");
         assert_eq!(step.body, "New note: keep retries off.");
+    }
+
+    #[test]
+    fn a_stopped_step_keeps_its_text_or_returns_to_draft() {
+        let mut empty = Step::new("a.png".into(), 0, false);
+        empty.status = StepStatus::Queued;
+        restore_unwritten(&mut empty);
+        assert_eq!(empty.status, StepStatus::Draft);
+
+        let mut written = Step::new("b.png".into(), 0, false);
+        written.body = "Click Save.".into();
+        written.status = StepStatus::Generating;
+        written.error = Some("old".into());
+        restore_unwritten(&mut written);
+        assert_eq!(written.status, StepStatus::Ready);
+        assert_eq!(written.error, None);
+        assert_eq!(written.body, "Click Save.");
+    }
+
+    #[tokio::test]
+    async fn a_stop_request_interrupts_a_pending_call() {
+        let cancel = Arc::new(AtomicBool::new(false));
+        let flag = Arc::clone(&cancel);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            flag.store(true, Ordering::SeqCst);
+        });
+
+        let outcome = tokio::time::timeout(Duration::from_secs(5), async {
+            tokio::select! {
+                () = std::future::pending::<()>() => "finished",
+                () = stop_requested(&cancel) => "stopped",
+            }
+        })
+        .await;
+        assert_eq!(outcome, Ok("stopped"));
     }
 }

@@ -106,3 +106,7 @@ Defaults in **Settings → Writing** (and the source picker before recording):
 ## Privacy
 
 Screenshots and prompts are sent **only when you click Write**, and only to the provider or endpoint you configured. See [Privacy and data](privacy.md).
+
+## Stopping a write job
+
+Select **Stop** (the ✕ next to the progress count in the top bar) to cancel. Requests already in flight are abandoned immediately. Steps that were finished stay written, and the rest return to how they were before the job started.

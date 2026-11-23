@@ -121,6 +121,7 @@ export async function connectEvents(): Promise<UnlistenFn> {
         "ai:done",
         ({ payload }) => {
           store.generation = null;
+          store.stoppingGeneration = false;
           void store.refreshProjects();
           if (payload.cancelled) {
             store.notify({ tone: "info", title: "Writing stopped" });
@@ -140,6 +141,7 @@ export async function connectEvents(): Promise<UnlistenFn> {
     unlisteners.push(
       await listen<AppError>("ai:error", ({ payload }) => {
         store.generation = null;
+        store.stoppingGeneration = false;
         store.reportError(payload, "Writing failed");
       }),
     );

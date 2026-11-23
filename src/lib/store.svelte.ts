@@ -72,6 +72,8 @@ class AppStore {
   /** Set while the main window initiated stop so we don't finalize twice. */
   finalizingFromMainStop = false;
   generation = $state<GenerationProgress | null>(null);
+  /** A stop was requested and the run has not wound down yet. */
+  stoppingGeneration = $state(false);
   route = $state<Route>("library");
   dialog = $state<DialogName>(null);
   /** Which settings sidebar tab to open. */
@@ -735,6 +737,7 @@ class AppStore {
       return;
     }
     try {
+      this.stoppingGeneration = false;
       this.generation = { done: 0, total: 0, running: true };
       await api.generate(scope, ids, {
         provider: this.writeProvider,
@@ -748,7 +751,14 @@ class AppStore {
   }
 
   async stopGeneration() {
-    await api.cancelGeneration();
+    if (this.stoppingGeneration) return;
+    this.stoppingGeneration = true;
+    try {
+      await api.cancelGeneration();
+    } catch (error) {
+      this.stoppingGeneration = false;
+      this.reportError(error, "Could not stop writing");
+    }
   }
 }
 
