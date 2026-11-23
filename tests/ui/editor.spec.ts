@@ -314,6 +314,47 @@ test.describe("wording in Settings", () => {
   });
 });
 
+test.describe("export from the library", () => {
+  test("a button on the card opens the export dialog without opening the editor", async ({ app }) => {
+    const page = app.page;
+    await page.getByRole("button", { name: "Export Sample guide" }).click();
+
+    await expect(page.getByText("Export this document")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Word/ })).toBeVisible();
+    // Still on the library: the editor never opened.
+    await expect(page.getByRole("textbox", { name: "Step description" })).toHaveCount(0);
+    expect((await app.calls("open_project")).map((c) => c.args.id)).toEqual(["guide-1"]);
+  });
+
+  test("closing the dialog closes the document again", async ({ app }) => {
+    const page = app.page;
+    await page.getByRole("button", { name: "Export Sample guide" }).click();
+    await page.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(page.getByText("Export this document")).toHaveCount(0);
+    await expect.poll(async () => (await app.calls("close_project")).length).toBe(1);
+    // Back to the plain library, ready to open or export something else.
+    await expect(page.getByRole("button", { name: /^Sample guide/ })).toBeVisible();
+    await page.getByRole("button", { name: "Export Sample guide" }).click();
+    await expect(page.getByText("Export this document")).toBeVisible();
+  });
+
+  test("the card menu has an Export entry too", async ({ app }) => {
+    const page = app.page;
+    await page.getByRole("button", { name: "Document options for Sample guide" }).click();
+    await page.getByRole("menuitem", { name: "Export…" }).click();
+    await expect(page.getByText("Export this document")).toBeVisible();
+  });
+
+  test("exporting from inside a guide does not close it", async ({ app }) => {
+    await app.openGuide();
+    await app.page.getByRole("button", { name: "Export", exact: true }).click();
+    await app.page.getByRole("button", { name: "Cancel" }).click();
+    await expect(app.page.getByRole("textbox", { name: "Step description" }).first()).toBeVisible();
+    expect(await app.calls("close_project")).toHaveLength(0);
+  });
+});
+
 test.describe("export", () => {
   test("offers the details line as an option", async ({ app }) => {
     await app.openGuide();

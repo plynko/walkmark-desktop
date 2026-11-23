@@ -290,7 +290,19 @@
 			</div>
 		</button>
 
-		<div class="absolute top-3 right-3 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+		<div class="absolute top-3 right-3 z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+			<button
+				type="button"
+				class="grid size-8 place-items-center rounded-xl bg-(--bg-elevated)/95 text-(--text)/72 shadow-sm ring-1 ring-(--text)/10 backdrop-blur-sm transition-colors hover:bg-(--bg-elevated) hover:text-(--text) disabled:opacity-40"
+				aria-label="Export {project.title}" data-tooltip="Export"
+				disabled={project.stepCount === 0}
+				onclick={(event) => {
+					event.stopPropagation();
+					void store.exportFromLibrary(project.id);
+				}}
+			>
+				<Icon icon="lucide:download" class="size-4" />
+			</button>
 			<DropdownMenu>
 				<DropdownMenuTrigger>
 					{#snippet child({ props })}
@@ -306,6 +318,13 @@
 					{/snippet}
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" class="w-40">
+					<DropdownMenuItem
+						disabled={project.stepCount === 0}
+						onclick={() => void store.exportFromLibrary(project.id)}
+					>
+						<Icon icon="lucide:download" />
+						Export…
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						variant="destructive"
 						onclick={() => (deleteTarget = project)}

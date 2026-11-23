@@ -73,6 +73,8 @@ class AppStore {
   /** Set while the main window initiated stop so we don't finalize twice. */
   finalizingFromMainStop = false;
   generation = $state<GenerationProgress | null>(null);
+  /** The open document was opened only to export it from the library. */
+  exportOpenedFromLibrary = false;
   /** A stop was requested and the run has not wound down yet. */
   stoppingGeneration = $state(false);
   route = $state<Route>("library");
@@ -332,7 +334,30 @@ class AppStore {
     this.dialog = "settings";
   }
 
+  /**
+   * Opens the export dialog for a document from the library. The dialog works
+   * on the open document, so it is opened behind the scenes, without leaving
+   * the library, and closed again with the dialog.
+   */
+  async exportFromLibrary(id: string) {
+    if (this.project?.id !== id) {
+      try {
+        this.project = await api.openProject(id);
+      } catch (error) {
+        this.reportError(error, "That document could not be opened");
+        return;
+      }
+      this.exportOpenedFromLibrary = true;
+    }
+    this.setDialog("export");
+  }
+
   closeDialog() {
+    if (this.exportOpenedFromLibrary && this.dialog === "export") {
+      this.exportOpenedFromLibrary = false;
+      this.project = null;
+      void api.closeProject().catch(() => {});
+    }
     if (this.dialogReturn) {
       this.dialog = this.dialogReturn;
       this.dialogReturn = null;

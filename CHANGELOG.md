@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.2.4 — unreleased
+## 0.2.4 — 2026-11-23
 
+- Export a document straight from the library: a download button on each card, and **Export…** in its menu. The document is opened behind the scenes and closed again with the dialog.
 - Export as Word (.docx): real headings and lists, formatted text, screenshots with annotations and crop applied, translated fixed wording, details line and page numbers.
 - Fixed step thumbnails in the left column disappearing after the guide was edited (renaming, changing the version, AI updates). A picture that cannot be loaded now shows a placeholder instead of an empty box.
 - Changing the default engine or model in Settings now also changes what Write uses; before, Write kept calling the previous provider until the write menu was changed by hand.

@@ -1,6 +1,6 @@
 # Export
 
-Open **Export** from the document toolbar (**⌘E** / **Ctrl+E**) when the guide reads right.
+Open **Export** from the document toolbar (**⌘E** / **Ctrl+E**) when the guide reads right. You can also export from the library without opening a guide: hover over a document and select the download button, or choose **Export…** in its **⋯** menu.
 
 ## Formats
 
