@@ -33,6 +33,34 @@
 	let query = $state("");
 	let page = $state(1);
 
+	type View = "cards" | "details";
+	const VIEW_KEY = "walkmark.libraryView";
+
+	function savedView(): View {
+		try {
+			return localStorage.getItem(VIEW_KEY) === "details" ? "details" : "cards";
+		} catch {
+			return "cards";
+		}
+	}
+
+	let view = $state<View>(savedView());
+
+	function setView(next: View) {
+		view = next;
+		try {
+			localStorage.setItem(VIEW_KEY, next);
+		} catch {
+			// The choice just won't be remembered.
+		}
+	}
+
+	function writtenOn(iso: string): string {
+		const date = new Date(iso);
+		if (Number.isNaN(date.getTime())) return "";
+		return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+	}
+
 	const filtered = $derived(
 		store.projects.filter((project) => {
 			const needle = query.trim().toLowerCase();
@@ -129,6 +157,26 @@
 								Clear
 							</Button>
 						{/if}
+						<div
+							class="flex shrink-0 items-center gap-0.5 rounded-xl bg-(--bg-elevated) p-0.5"
+							role="group"
+							aria-label="View"
+						>
+							{#each [{ id: "cards", icon: "lucide:layout-grid", label: "Cards" }, { id: "details", icon: "lucide:list", label: "Details" }] as option (option.id)}
+								<button
+									type="button"
+									class="grid size-8 place-items-center rounded-[10px] transition-colors {view === option.id
+										? 'bg-(--text)/10 text-(--text)'
+										: 'text-(--text)/56 hover:text-(--text)'}"
+									aria-label={option.label}
+									aria-pressed={view === option.id}
+									data-tooltip={option.label}
+									onclick={() => setView(option.id as View)}
+								>
+									<Icon icon={option.icon} class="size-4" />
+								</button>
+							{/each}
+						</div>
 					</div>
 				</div>
 
@@ -154,11 +202,27 @@
 						{/if}
 					</p>
 
-					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each pageItems as project (project.id)}
-							{@render card(project)}
-						{/each}
-					</div>
+					{#if view === "details"}
+						<div class="overflow-hidden rounded-3xl bg-(--bg-elevated)">
+							<div
+								class="grid grid-cols-[minmax(0,1fr)_5rem_11rem_4.5rem] items-center gap-4 border-b border-(--text)/8 px-5 py-2.5 text-xs font-medium text-(--text)/40"
+							>
+								<span>Name</span>
+								<span>Steps</span>
+								<span>Written</span>
+								<span class="sr-only">Actions</span>
+							</div>
+							{#each pageItems as project (project.id)}
+								{@render row(project)}
+							{/each}
+						</div>
+					{:else}
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							{#each pageItems as project (project.id)}
+								{@render card(project)}
+							{/each}
+						</div>
+					{/if}
 
 					{#if totalPages > 1}
 						<div
@@ -291,49 +355,75 @@
 		</button>
 
 		<div class="absolute top-3 right-3 z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-			<button
-				type="button"
-				class="grid size-8 place-items-center rounded-xl bg-(--bg-elevated)/95 text-(--text)/72 shadow-sm ring-1 ring-(--text)/10 backdrop-blur-sm transition-colors hover:bg-(--bg-elevated) hover:text-(--text) disabled:opacity-40"
-				aria-label="Export {project.title}" data-tooltip="Export"
+			{@render actions(project)}
+		</div>
+	</article>
+{/snippet}
+
+{#snippet actions(project: ProjectSummary)}
+	<button
+		type="button"
+		class="grid size-8 place-items-center rounded-xl bg-(--bg-elevated)/95 text-(--text)/72 shadow-sm ring-1 ring-(--text)/10 backdrop-blur-sm transition-colors hover:bg-(--bg-elevated) hover:text-(--text) disabled:opacity-40"
+		aria-label="Export {project.title}" data-tooltip="Export"
+		disabled={project.stepCount === 0}
+		onclick={(event) => {
+			event.stopPropagation();
+			void store.exportFromLibrary(project.id);
+		}}
+	>
+		<Icon icon="lucide:download" class="size-4" />
+	</button>
+	<DropdownMenu>
+		<DropdownMenuTrigger>
+			{#snippet child({ props })}
+				<button
+					{...props}
+					type="button"
+					class="grid size-8 place-items-center rounded-xl bg-(--bg-elevated)/95 text-(--text)/72 shadow-sm ring-1 ring-(--text)/10 backdrop-blur-sm transition-colors hover:bg-(--bg-elevated) hover:text-(--text)"
+					aria-label="Document options for {project.title}" data-tooltip="Document options"
+					onclick={(event) => event.stopPropagation()}
+				>
+					<Icon icon="lucide:ellipsis" class="size-4" />
+				</button>
+			{/snippet}
+		</DropdownMenuTrigger>
+		<DropdownMenuContent align="end" class="w-40">
+			<DropdownMenuItem
 				disabled={project.stepCount === 0}
-				onclick={(event) => {
-					event.stopPropagation();
-					void store.exportFromLibrary(project.id);
-				}}
+				onclick={() => void store.exportFromLibrary(project.id)}
 			>
-				<Icon icon="lucide:download" class="size-4" />
-			</button>
-			<DropdownMenu>
-				<DropdownMenuTrigger>
-					{#snippet child({ props })}
-						<button
-							{...props}
-							type="button"
-							class="grid size-8 place-items-center rounded-xl bg-(--bg-elevated)/95 text-(--text)/72 shadow-sm ring-1 ring-(--text)/10 backdrop-blur-sm transition-colors hover:bg-(--bg-elevated) hover:text-(--text)"
-							aria-label="Document options for {project.title}" data-tooltip="Document options"
-							onclick={(event) => event.stopPropagation()}
-						>
-							<Icon icon="lucide:ellipsis" class="size-4" />
-						</button>
-					{/snippet}
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" class="w-40">
-					<DropdownMenuItem
-						disabled={project.stepCount === 0}
-						onclick={() => void store.exportFromLibrary(project.id)}
-					>
-						<Icon icon="lucide:download" />
-						Export…
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						variant="destructive"
-						onclick={() => (deleteTarget = project)}
-					>
-						<Icon icon="lucide:trash-2" />
-						Delete
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+				<Icon icon="lucide:download" />
+				Export…
+			</DropdownMenuItem>
+			<DropdownMenuItem
+				variant="destructive"
+				onclick={() => (deleteTarget = project)}
+			>
+				<Icon icon="lucide:trash-2" />
+				Delete
+			</DropdownMenuItem>
+		</DropdownMenuContent>
+	</DropdownMenu>
+{/snippet}
+
+{#snippet row(project: ProjectSummary)}
+	<article
+		class="group relative border-b border-(--text)/6 last:border-b-0 hover:bg-(--text)/4"
+	>
+		<button
+			type="button"
+			class="grid w-full grid-cols-[minmax(0,1fr)_5rem_11rem_4.5rem] items-center gap-4 px-5 py-3 text-left"
+			onclick={() => void store.openProject(project.id)}
+		>
+			<span class="truncate text-sm font-medium text-(--text)">{project.title}</span>
+			<span class="text-xs tabular-nums text-(--text)/56">{project.stepCount}</span>
+			<span class="truncate text-xs text-(--text)/56">{writtenOn(project.updatedAt)}</span>
+			<span></span>
+		</button>
+		<div
+			class="absolute top-1/2 right-3 z-10 flex -translate-y-1/2 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+		>
+			{@render actions(project)}
 		</div>
 	</article>
 {/snippet}

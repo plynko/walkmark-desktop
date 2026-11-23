@@ -374,3 +374,22 @@ test.describe("export", () => {
     await expect.poll(async () => (await app.calls("suggest_export_name")).map((c) => c.args.format)).toEqual(["docx"]);
   });
 });
+
+test.describe("library views", () => {
+  test("the details view lists name, steps and written date, and is remembered", async ({ app }) => {
+    const page = app.page;
+    await page.getByRole("button", { name: "Details" }).click();
+
+    await expect(page.getByText("Name", { exact: true })).toBeVisible();
+    await expect(page.getByText("Steps", { exact: true })).toBeVisible();
+    await expect(page.getByText("Written", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Sample guide/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Export Sample guide" })).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole("button", { name: "Details" })).toHaveAttribute("aria-pressed", "true");
+
+    await page.getByRole("button", { name: "Cards" }).click();
+    await expect(page.getByText("Written", { exact: true })).toHaveCount(0);
+  });
+});

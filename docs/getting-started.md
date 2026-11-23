@@ -29,7 +29,7 @@ You can skip onboarding and configure later in **Settings → Model**. Recording
 
 ## The library
 
-The **library** is your home screen. Each card is a saved guide with a thumbnail, title, step count, and last-edited time.
+The **library** is your home screen. Each card is a saved guide with a thumbnail, title, step count, and last-edited time. Switch to **Details** (next to the search box) for a table with name, steps and written date; Walkmark remembers your choice.
 
 | Action | How |
 | --- | --- |
