@@ -13,6 +13,8 @@ Compile Walkmark locally for development, custom builds, or platforms without a 
 
 **Platforms:** macOS 11+, Windows 10+ (x64 or ARM64), Linux with working screen capture (X11 or Wayland portal).
 
+HTTPS to the AI providers uses the operating system's own TLS (Schannel on Windows, Security.framework on macOS, OpenSSL on Linux), so no C code is compiled for it. On Linux install the OpenSSL headers (`libssl-dev` on Debian and Ubuntu) next to the other Tauri prerequisites.
+
 ## Clone and install
 
 ```bash

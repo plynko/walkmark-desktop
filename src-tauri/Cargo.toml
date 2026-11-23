@@ -27,8 +27,9 @@ reqwest = { version = "0.13", features = [
   "json",
   "http2",
   "charset",
-  "rustls",
-  "webpki-roots",
+  # The operating system's own TLS (Schannel, Security.framework, OpenSSL):
+  # nothing to compile in C, so Windows builds also work from macOS and Linux.
+  "native-tls",
   "system-proxy",
 ], default-features = false }
 

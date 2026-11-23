@@ -4,6 +4,8 @@
 
 - Export as Word (.docx): real headings and lists, formatted text, screenshots with annotations and crop applied, translated fixed wording, details line and page numbers.
 - Rust code formatted with `cargo fmt`.
+- HTTPS now uses the operating system's TLS instead of a bundled crypto library. The Rust code compiles for Windows (x64 and ARM64) from macOS, and Linux builds need `libssl-dev`.
+- An optional test (`RUN_LIVE_TESTS=1`) checks HTTPS against the real provider APIs.
 
 ## 0.2.3 — 2026-11-23
 
