@@ -126,7 +126,7 @@ mod tests {
 
         let text = std::fs::read_to_string(&destination).unwrap();
         std::fs::remove_dir_all(&dir).ok();
-        assert!(text.contains("Esportato il 2026-11-23 · Versione 1.0"));
+        assert!(text.contains("2026-11-23 · Versione 1.0"));
         assert!(text.contains("## Prima di iniziare"));
         assert!(text.contains("## Passaggi"));
         assert!(text.contains("_Generato con Walkmark._"));

@@ -272,7 +272,7 @@ mod tests {
         assert!(html.contains("<p class=\"eyebrow\">Guida passo passo</p>"));
         assert!(html.contains("<h2>Prima di iniziare</h2>"));
         assert!(html.contains(
-            "<p class=\"details\">Esportato il 2026-11-23 · Versione 1.0 · Autore Erik</p>"
+            "<p class=\"details\">2026-11-23 · Versione 1.0 · Autore Erik</p>"
         ));
         assert!(!html.contains("Before you start"));
     }

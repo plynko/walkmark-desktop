@@ -188,7 +188,6 @@ test.describe("document details", () => {
     const page = app.page;
     await expect(page.getByText("Step-by-step guide", { exact: true })).toBeVisible();
     await expect(page.getByText("Before you start", { exact: true })).toBeVisible();
-    await expect(page.getByText("Exported", { exact: true })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Guide label" })).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: "Version", exact: true })).toHaveValue("1.0");
     await expect(page.getByRole("textbox", { name: "Author", exact: true })).toHaveValue("");
@@ -220,7 +219,6 @@ test.describe("document details", () => {
       await app.openGuide();
       await expect(app.page.getByText("Guida passo passo", { exact: true })).toBeVisible();
       await expect(app.page.getByText("Prima di iniziare", { exact: true })).toBeVisible();
-      await expect(app.page.getByText("Esportato il", { exact: true })).toBeVisible();
       await expect(app.page.getByText("Versione", { exact: true })).toBeVisible();
     });
   });

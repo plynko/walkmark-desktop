@@ -652,7 +652,7 @@ mod tests {
         for expected in [
             "GUIDA PASSO PASSO",
             "Guida all&apos;installazione",
-            "Esportato il 2026-11-23 · Versione 1.0 · Autore Erik",
+            "2026-11-23 · Versione 1.0 · Autore Erik",
             "Prima di iniziare",
             "Un account",
             "Passaggi",

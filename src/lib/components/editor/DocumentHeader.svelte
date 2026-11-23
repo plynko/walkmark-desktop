@@ -17,7 +17,6 @@
 	const ENGLISH: DocumentLabels = {
 		guide: 'Step-by-step guide',
 		prerequisites: 'Before you start',
-		exported: 'Exported',
 		version: 'Version',
 		author: 'Author',
 		steps: 'Steps',
@@ -145,7 +144,6 @@
 	></textarea>
 
 	<div class="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-(--text)/56">
-		<span>{words.exported}</span>
 		<span
 			class="tabular-nums"
 			data-tooltip="Filled in automatically on the day you export">{today}</span>

@@ -19,7 +19,6 @@
 			fields: [
 				{ key: 'guide', label: 'Heading above the title', hint: 'Small line over the guide’s title.' },
 				{ key: 'prerequisites', label: 'Prerequisites heading', hint: 'Heads the list of what the reader needs first.' },
-				{ key: 'exported', label: 'Before the export date', hint: 'Comes before the date, e.g. “Exported 2026-11-23”.' },
 				{ key: 'version', label: 'Before the version', hint: 'Comes before the version number.' },
 				{ key: 'author', label: 'Before the author', hint: 'Comes before the author’s name.' }
 			]

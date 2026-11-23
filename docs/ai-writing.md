@@ -109,7 +109,7 @@ Screenshots and prompts are sent **only when you click Write**, and only to the 
 
 ## Translating the fixed wording
 
-Exports print a few fixed words around your text: the heading above the title, “Before you start”, “Exported”, “Version” and “Author” in the line under the title, the headings of the step list and the contents, “Step”, the step count and the credit line. They are set per language in **Settings → Writing → Wording in exports**, and follow the Language setting there.
+Exports print a few fixed words around your text: the heading above the title, “Before you start”, “Version” and “Author” in the line under the title, the headings of the step list and the contents, “Step”, the step count and the credit line. They are set per language in **Settings → Writing → Wording in exports**, and follow the Language setting there.
 
 Walkmark has this wording built in for English, Italian, Spanish, French, German, Portuguese and Dutch. For any other language, select **Translate with AI** to translate them all with the model chosen in Settings, or type your own. It sends only those short labels, no screenshots. Anything you change is kept for that language; **Back to the built-in wording** undoes it.
 

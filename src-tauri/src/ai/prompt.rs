@@ -126,7 +126,6 @@ pub fn outline_schema() -> serde_json::Value {
 const LABEL_MEANINGS: &[(&str, &str)] = &[
     ("guide", "is a small heading above the title of the guide."),
     ("prerequisites", "is the heading of a list of things the reader needs first."),
-    ("exported", "comes directly before a date, as in \"{english} 2026-11-23\"."),
     ("version", "comes directly before a version number, as in \"{english} 1.0\"."),
     ("author", "comes directly before a person's name, as in \"{english} Erik\"."),
     ("steps", "is the heading of a list of the step titles."),
@@ -236,6 +235,5 @@ mod label_prompt_tests {
         let prompt = labels_prompt("Italian");
         assert!(prompt.contains("into Italian"));
         assert!(prompt.contains("- stepMany: \"steps\""));
-        assert!(prompt.contains("as in \"Exported 2026-11-23\""));
     }
 }

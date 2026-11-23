@@ -379,7 +379,6 @@ macro_rules! document_labels {
 document_labels! {
     guide => "Step-by-step guide",
     prerequisites => "Before you start",
-    exported => "Exported",
     version => "Version",
     author => "Author",
     steps => "Steps",
@@ -394,14 +393,13 @@ impl DocumentLabels {
     /// Wording that ships with Walkmark. Languages not listed here are
     /// translated by the user, or by the AI on request.
     pub fn built_in(language: &str) -> Option<Self> {
-        // Order: guide, prerequisites, exported, version, author, steps,
+        // Order: guide, prerequisites, version, author, steps,
         // on this page, step, step (one), steps (many), generated with.
         let words = match language.trim().to_lowercase().as_str() {
             "english" => return Some(Self::english()),
             "italian" => [
                 "Guida passo passo",
                 "Prima di iniziare",
-                "Esportato il",
                 "Versione",
                 "Autore",
                 "Passaggi",
@@ -414,7 +412,6 @@ impl DocumentLabels {
             "spanish" => [
                 "Guía paso a paso",
                 "Antes de empezar",
-                "Exportado el",
                 "Versión",
                 "Autor",
                 "Pasos",
@@ -427,7 +424,6 @@ impl DocumentLabels {
             "french" => [
                 "Guide pas à pas",
                 "Avant de commencer",
-                "Exporté le",
                 "Version",
                 "Auteur",
                 "Étapes",
@@ -440,7 +436,6 @@ impl DocumentLabels {
             "german" => [
                 "Schritt-für-Schritt-Anleitung",
                 "Bevor Sie beginnen",
-                "Exportiert am",
                 "Version",
                 "Autor",
                 "Schritte",
@@ -453,7 +448,6 @@ impl DocumentLabels {
             "portuguese" => [
                 "Guia passo a passo",
                 "Antes de começar",
-                "Exportado em",
                 "Versão",
                 "Autor",
                 "Passos",
@@ -466,7 +460,6 @@ impl DocumentLabels {
             "dutch" => [
                 "Stapsgewijze handleiding",
                 "Voordat je begint",
-                "Geëxporteerd op",
                 "Versie",
                 "Auteur",
                 "Stappen",
@@ -1140,7 +1133,7 @@ mod label_tests {
         let italian = settings.resolve_labels(" italian ");
         assert!(italian.localized);
         assert_eq!(italian.labels.prerequisites, "Prima di iniziare");
-        assert_eq!(italian.labels.exported, "Esportato il");
+        assert_eq!(italian.labels.version, "Versione");
     }
 
     #[test]

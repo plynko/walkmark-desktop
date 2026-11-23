@@ -187,7 +187,6 @@ function installTauriMock(language: string) {
         const english = {
           guide: "Step-by-step guide",
           prerequisites: "Before you start",
-          exported: "Exported",
           version: "Version",
           author: "Author",
           steps: "Steps",
@@ -200,7 +199,6 @@ function installTauriMock(language: string) {
         const italian = {
           guide: "Guida passo passo",
           prerequisites: "Prima di iniziare",
-          exported: "Esportato il",
           version: "Versione",
           author: "Autore",
           steps: "Passaggi",
@@ -224,7 +222,6 @@ function installTauriMock(language: string) {
         return {
           guide: "Pamoka žingsnis po žingsnio",
           prerequisites: "Prieš pradedant",
-          exported: "Eksportuota",
           version: "Versija",
           author: "Autorius",
           steps: "Žingsniai",

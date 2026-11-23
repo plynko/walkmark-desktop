@@ -63,7 +63,7 @@ fn default_true() -> bool {
     true
 }
 
-/// The parts of the line under the title, e.g. `["Exported 2026-11-23",
+/// The parts of the line under the title, e.g. `["2026-11-23",
 /// "Version 1.0", "Author Erik"]`. Version and author are left out while empty.
 /// The labels come from Settings for the guide's language.
 pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<String> {
@@ -73,7 +73,7 @@ pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<St
     let labels = &options.labels;
     let mut parts = Vec::new();
     if !options.exported_on.is_empty() {
-        parts.push(format!("{} {}", labels.exported(), options.exported_on));
+        parts.push(options.exported_on.clone());
     }
     if !project.version.trim().is_empty() {
         parts.push(format!("{} {}", labels.version(), project.version.trim()));
@@ -277,7 +277,7 @@ mod tests {
         project.author = "Erik".into();
         assert_eq!(
             detail_parts(&project, &dated()),
-            ["Exported 2026-11-23", "Version 1.0", "Author Erik"]
+            ["2026-11-23", "Version 1.0", "Author Erik"]
         );
 
         project.version = "2.1".into();
@@ -287,7 +287,7 @@ mod tests {
         };
         assert_eq!(
             detail_parts(&project, &italian),
-            ["Esportato il 2026-11-23", "Versione 2.1", "Autore Erik"]
+            ["2026-11-23", "Versione 2.1", "Autore Erik"]
         );
     }
 
@@ -295,7 +295,7 @@ mod tests {
     fn details_skip_empty_fields_and_can_be_turned_off() {
         let mut project = Project::new("Guide", "");
         project.version = "  ".into();
-        assert_eq!(detail_parts(&project, &dated()), ["Exported 2026-11-23"]);
+        assert_eq!(detail_parts(&project, &dated()), ["2026-11-23"]);
 
         let off = ExportOptions {
             include_details: false,

@@ -63,7 +63,6 @@ export interface Step {
 export interface DocumentLabels {
   guide: string;
   prerequisites: string;
-  exported: string;
   version: string;
   author: string;
   steps: string;
