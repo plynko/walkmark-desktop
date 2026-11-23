@@ -215,6 +215,24 @@ impl Client {
         .await
     }
 
+    /// Translates the guide's fixed labels. Text only, so any model can do it.
+    pub async fn translate_labels(
+        &self,
+        language: &str,
+    ) -> Result<crate::models::DocumentLabels> {
+        let prompt = super::prompt::labels_prompt(language);
+        self.ask(&Ask {
+            system: "You translate short interface labels for documentation.",
+            prompt: &prompt,
+            images: Vec::new(),
+            schema: super::prompt::labels_schema(),
+            schema_name: "labels",
+            temperature: 0.2,
+            max_tokens: 256,
+        })
+        .await
+    }
+
     pub async fn describe(
         &self,
         system: &str,

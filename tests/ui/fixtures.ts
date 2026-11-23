@@ -57,7 +57,7 @@ function installTauriMock() {
   });
   const catalog = {
     providers: [provider("gemini", "Google Gemini", false), provider("ollama", "On this Mac", true)],
-    configured: [],
+    configured: ["gemini"],
   };
   const local = {
     running: true,
@@ -90,7 +90,10 @@ function installTauriMock() {
       id: "guide-1",
       title: "Sample guide",
       summary: "",
-      prerequisites: [],
+      prerequisites: ["An admin account"],
+      version: "1.0",
+      author: "",
+      labels: { guide: "", prerequisites: "", exported: "", version: "", author: "" },
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-01T00:00:00Z",
       sourceLabel: "Window",
@@ -167,6 +170,17 @@ function installTauriMock() {
             thumbnail: null,
           },
         ];
+      case "update_project_meta":
+        Object.assign(state.project, args.meta);
+        return structuredClone(state.project);
+      case "translate_labels":
+        return {
+          guide: "Guida passo passo",
+          prerequisites: "Prima di iniziare",
+          exported: "Esportato il",
+          version: "Versione",
+          author: "Autore",
+        };
       case "update_step": {
         const step = state.project.steps.find((s) => s.id === args.id)!;
         const { frame, ...rest } = args.patch;

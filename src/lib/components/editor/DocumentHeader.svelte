@@ -9,6 +9,17 @@
 	import { LIMITS } from '$lib/limits';
 	import { autosize } from '$lib/autosize';
 	import MarkdownField from './MarkdownField.svelte';
+	import InlineField from './InlineField.svelte';
+	import type { DocumentLabels } from '$lib/types';
+
+	// What exports print when a label is left empty. Mirrors `DocumentLabels` in Rust.
+	const DEFAULT_LABELS: DocumentLabels = {
+		guide: 'Step-by-step guide',
+		prerequisites: 'Before you start',
+		exported: 'Exported',
+		version: 'Version',
+		author: 'Author'
+	};
 
 	const project = $derived(store.project!);
 	const recording = $derived(store.recording);
@@ -43,9 +54,16 @@
 		if (addingPrereq) prereqInputRef?.focus();
 	});
 
-	function patchMeta(meta: { title?: string; summary?: string; prerequisites?: string[] }) {
+	function patchMeta(meta: Parameters<typeof store.patchMeta>[0]) {
 		void store.patchMeta(meta);
 	}
+
+	function patchLabel(key: keyof DocumentLabels, value: string) {
+		patchMeta({ labels: { ...project.labels, [key]: value } });
+	}
+
+	// The real date is stamped at export time; this is only a preview of it.
+	const today = new Date().toLocaleDateString('sv-SE');
 
 	function commitPrereq() {
 		const value = prereqDraft.trim();
@@ -78,6 +96,15 @@
 		{/if}
 	</div>
 
+	<InlineField
+		value={project.labels.guide}
+		label="Guide label"
+		placeholder={DEFAULT_LABELS.guide}
+		maxlength={LIMITS.documentLabel}
+		onCommit={(value) => patchLabel('guide', value)}
+		class="-mx-1 mb-1 text-[11.5px] font-semibold tracking-wider text-(--text)/56 uppercase"
+	/>
+
 	<textarea
 		use:autosize={titleDraft}
 		rows={1}
@@ -97,6 +124,63 @@
 		}}
 		class="-mx-1.5 w-full resize-none overflow-hidden rounded-xl bg-transparent px-1.5 py-0.5 text-[27px] font-semibold leading-[1.2] tracking-[-0.02em] outline-none placeholder:text-(--text)/40 hover:bg-(--text)/5 focus:bg-(--text)/8 focus:ring-1 focus:ring-(--text)/24"
 	></textarea>
+
+	<div class="mt-2 -mx-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-[12.5px] text-(--text)/56">
+		<InlineField
+			value={project.labels.exported}
+			label="Export date label"
+			placeholder={DEFAULT_LABELS.exported}
+			maxlength={LIMITS.documentLabel}
+			onCommit={(value) => patchLabel('exported', value)}
+		/>
+		<span
+			class="-ml-1 tabular-nums"
+			data-tooltip="Filled in automatically on the day you export"
+			title="Filled in automatically on the day you export">{today}</span>
+		<span aria-hidden="true">·</span>
+		<InlineField
+			value={project.labels.version}
+			label="Version label"
+			placeholder={DEFAULT_LABELS.version}
+			maxlength={LIMITS.documentLabel}
+			onCommit={(value) => patchLabel('version', value)}
+		/>
+		<InlineField
+			value={project.version}
+			label="Version"
+			placeholder="1.0"
+			maxlength={LIMITS.documentVersion}
+			onCommit={(value) => patchMeta({ version: value })}
+			class="-ml-1 text-(--text)/72"
+		/>
+		<span aria-hidden="true">·</span>
+		<InlineField
+			value={project.labels.author}
+			label="Author label"
+			placeholder={DEFAULT_LABELS.author}
+			maxlength={LIMITS.documentLabel}
+			onCommit={(value) => patchLabel('author', value)}
+		/>
+		<InlineField
+			value={project.author}
+			label="Author"
+			placeholder="Your name"
+			maxlength={LIMITS.documentAuthor}
+			onCommit={(value) => patchMeta({ author: value })}
+			class="-ml-1 text-(--text)/72"
+		/>
+		<Button
+			size="sm"
+			variant="ghost"
+			class="ml-auto"
+			disabled={store.translatingLabels}
+			data-tooltip="Translate the labels above and “Before you start” with AI, into the guide's language"
+			onclick={() => void store.translateLabels()}
+		>
+			<Icon icon="lucide:sparkles" class="size-3.5" aria-hidden="true" />
+			{store.translatingLabels ? 'Translating…' : 'Translate labels'}
+		</Button>
+	</div>
 
 	<MarkdownField
 		label="Guide summary"
@@ -128,9 +212,14 @@
 		</button>
 	{:else}
 		<div class="mt-5 rounded-3xl bg-(--text)/5 p-3.5">
-			<p class="mb-2 text-[11.5px] font-semibold tracking-wider text-(--text)/40 uppercase">
-				Before you start
-			</p>
+			<InlineField
+				value={project.labels.prerequisites}
+				label="Prerequisites heading"
+				placeholder={DEFAULT_LABELS.prerequisites}
+				maxlength={LIMITS.documentLabel}
+				onCommit={(value) => patchLabel('prerequisites', value)}
+				class="-ml-1 mb-1.5 text-[11.5px] font-semibold tracking-wider text-(--text)/56 uppercase"
+			/>
 			<ul class="flex flex-col gap-1">
 				{#each project.prerequisites as item, index (item + index)}
 					<li class="group flex items-center gap-2">

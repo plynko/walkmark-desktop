@@ -1,4 +1,4 @@
-use crate::models::Settings;
+use crate::models::{DocumentLabels, Settings};
 
 /// Shared voice and hard rules. Kept in one place so the outline pass and the
 /// per-step pass can never drift apart stylistically.
@@ -118,6 +118,41 @@ pub fn outline_schema() -> serde_json::Value {
         },
         "required": ["title", "summary", "steps"],
         "propertyOrdering": ["title", "summary", "prerequisites", "steps"]
+    })
+}
+
+/// Asks for the wording a guide prints around its own text, in the guide's
+/// language. Text only: no screenshots are involved.
+pub fn labels_prompt(language: &str) -> String {
+    format!(
+        "Translate these five short labels from a how-to guide into {language}. \
+They are printed in a document, so use the wording a native technical writer would choose.\n\n\
+- guide: \"{guide}\" is a small heading above the title of the guide.\n\
+- prerequisites: \"{prerequisites}\" is the heading of a list of things the reader needs first.\n\
+- exported: \"{exported}\" comes directly before a date, as in \"{exported} 2026-11-23\".\n\
+- version: \"{version}\" comes directly before a version number, as in \"{version} 1.0\".\n\
+- author: \"{author}\" comes directly before a person's name, as in \"{author} Erik\".\n\n\
+Keep each one short, with no trailing punctuation, and do not include the date, number or name.",
+        guide = DocumentLabels::GUIDE,
+        prerequisites = DocumentLabels::PREREQUISITES,
+        exported = DocumentLabels::EXPORTED,
+        version = DocumentLabels::VERSION,
+        author = DocumentLabels::AUTHOR,
+    )
+}
+
+pub fn labels_schema() -> serde_json::Value {
+    serde_json::json!({
+        "type": "object",
+        "properties": {
+            "guide": { "type": "string" },
+            "prerequisites": { "type": "string" },
+            "exported": { "type": "string" },
+            "version": { "type": "string" },
+            "author": { "type": "string" }
+        },
+        "required": ["guide", "prerequisites", "exported", "version", "author"],
+        "propertyOrdering": ["guide", "prerequisites", "exported", "version", "author"]
     })
 }
 

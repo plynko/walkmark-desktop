@@ -69,7 +69,7 @@ pub fn render(
 
     // --- Title block -----------------------------------------------------
     writer.text(
-        "STEP-BY-STEP GUIDE",
+        &project.labels.guide().to_uppercase(),
         &Style {
             size: 8.5,
             bold: true,
@@ -94,6 +94,23 @@ pub fn render(
         CONTENT_W,
     );
 
+    let details = super::detail_parts(project, options);
+    if !details.is_empty() {
+        writer.gap(10.0);
+        writer.text(
+            &details.join(super::DETAIL_SEPARATOR),
+            &Style {
+                size: 9.5,
+                bold: false,
+                color: MUTED,
+                leading: 1.4,
+                tracking: 0.0,
+            },
+            MARGIN_X,
+            CONTENT_W,
+        );
+    }
+
     if options.include_summary && !project.summary.trim().is_empty() {
         writer.gap(14.0);
         writer.text(
@@ -113,7 +130,7 @@ pub fn render(
     if options.include_prerequisites && !project.prerequisites.is_empty() {
         writer.gap(22.0);
         writer.text(
-            "Before you start",
+            project.labels.prerequisites(),
             &Style {
                 size: 11.0,
                 bold: true,
@@ -660,5 +677,26 @@ mod tests {
         }];
         let bytes = render(&project, &steps, &ExportOptions::default()).unwrap();
         assert!(bytes.starts_with(b"%PDF"));
+    }
+
+    #[test]
+    fn renders_translated_labels_with_accents() {
+        let mut project = Project::new("Guida all'installazione", "Display");
+        project.prerequisites = vec!["Un account".into()];
+        project.author = "Erik".into();
+        project.labels.guide = "Guida passo passo".into();
+        project.labels.prerequisites = "Prima di iniziare".into();
+        project.labels.exported = "Esportato il".into();
+        let steps = vec![RenderedStep {
+            number: 1,
+            title: "Apri l'app".into(),
+            body: "Fai clic sull'icona.".into(),
+            image: None,
+        }];
+        let options = ExportOptions {
+            exported_on: "2026-11-23".into(),
+            ..Default::default()
+        };
+        assert!(render(&project, &steps, &options).unwrap().starts_with(b"%PDF"));
     }
 }

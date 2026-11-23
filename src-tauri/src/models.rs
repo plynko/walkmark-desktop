@@ -314,6 +314,65 @@ pub struct DeletedStep {
     pub step: Step,
 }
 
+fn default_document_version() -> String {
+    "1.0".into()
+}
+
+/// Fixed wording that exports print around the guide's own text. Each one is
+/// editable so a guide can be written in any language; an empty value falls
+/// back to the English default.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DocumentLabels {
+    /// Small heading above the title.
+    pub guide: String,
+    /// Heading of the prerequisites list.
+    pub prerequisites: String,
+    /// Precedes the export date.
+    pub exported: String,
+    /// Precedes the version number.
+    pub version: String,
+    /// Precedes the author's name.
+    pub author: String,
+}
+
+impl DocumentLabels {
+    pub const GUIDE: &'static str = "Step-by-step guide";
+    pub const PREREQUISITES: &'static str = "Before you start";
+    pub const EXPORTED: &'static str = "Exported";
+    pub const VERSION: &'static str = "Version";
+    pub const AUTHOR: &'static str = "Author";
+
+    fn pick<'a>(value: &'a str, default: &'a str) -> &'a str {
+        let value = value.trim();
+        if value.is_empty() {
+            default
+        } else {
+            value
+        }
+    }
+
+    pub fn guide(&self) -> &str {
+        Self::pick(&self.guide, Self::GUIDE)
+    }
+
+    pub fn prerequisites(&self) -> &str {
+        Self::pick(&self.prerequisites, Self::PREREQUISITES)
+    }
+
+    pub fn exported(&self) -> &str {
+        Self::pick(&self.exported, Self::EXPORTED)
+    }
+
+    pub fn version(&self) -> &str {
+        Self::pick(&self.version, Self::VERSION)
+    }
+
+    pub fn author(&self) -> &str {
+        Self::pick(&self.author, Self::AUTHOR)
+    }
+}
+
 /// Version of the `project.json` layout. Projects written before the field
 /// existed read back as version 1.
 pub const PROJECT_SCHEMA_VERSION: u32 = 1;
@@ -343,6 +402,14 @@ pub struct Project {
     /// Language used when AI writes this document.
     #[serde(default = "default_language")]
     pub language: String,
+    /// Revision of the guide itself, shown under the title in exports.
+    #[serde(default = "default_document_version")]
+    pub version: String,
+    /// Who made the guide, shown under the title in exports.
+    #[serde(default)]
+    pub author: String,
+    #[serde(default)]
+    pub labels: DocumentLabels,
     #[serde(default)]
     pub steps: Vec<Step>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -362,6 +429,9 @@ impl Project {
             source_label: source_label.into(),
             product_id: None,
             language: default_language(),
+            version: default_document_version(),
+            author: String::new(),
+            labels: DocumentLabels::default(),
             steps: Vec::new(),
             deleted_steps: Vec::new(),
         }

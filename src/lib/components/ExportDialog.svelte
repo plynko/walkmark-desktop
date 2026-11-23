@@ -75,6 +75,7 @@
 		includeToc: true,
 		includeSummary: true,
 		includePrerequisites: true,
+		includeDetails: true,
 		theme: 'auto'
 	});
 	let exporting = $state(false);
@@ -245,6 +246,17 @@
 						<Switch
 							checked={options.includePrerequisites}
 							onCheckedChange={(includePrerequisites) => patch({ includePrerequisites })}
+						/>
+					</div>
+
+					<div class="flex items-center justify-between gap-4">
+						<div>
+							<Label>Include date, version and author</Label>
+							<p class="text-xs text-(--text)/56">A line under the title.</p>
+						</div>
+						<Switch
+							checked={options.includeDetails}
+							onCheckedChange={(includeDetails) => patch({ includeDetails })}
 						/>
 					</div>
 

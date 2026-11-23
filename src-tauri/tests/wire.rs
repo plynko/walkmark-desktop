@@ -272,6 +272,35 @@ fn ollama_needs_no_key_and_reads_the_message_back() {
     assert_eq!(request.body["messages"][1]["images"].as_array().unwrap().len(), 1);
 }
 
+#[test]
+fn label_translation_sends_no_images_and_reads_the_labels_back() {
+    let stub = Stub::new(1, |_, stream| {
+        reply(
+            stream,
+            200,
+            r#"{"candidates":[{"content":{"parts":[{"text":"{\"guide\":\"Guida passo passo\",\"prerequisites\":\"Prima di iniziare\",\"exported\":\"Esportato il\",\"version\":\"Versione\",\"author\":\"Autore\"}"}]}}]}"#,
+        )
+    });
+
+    let client = provider::Client::new(
+        Provider::Gemini,
+        "gemini-3.6-flash".into(),
+        stub.base.clone(),
+        "test-key".into(),
+    )
+    .unwrap();
+
+    let labels = block_on(client.translate_labels("Italian")).unwrap();
+    assert_eq!(labels.guide, "Guida passo passo");
+    assert_eq!(labels.prerequisites, "Prima di iniziare");
+    assert_eq!(labels.author, "Autore");
+
+    let parts = stub.requests()[0].body["contents"][0]["parts"].clone();
+    let parts = parts.as_array().unwrap();
+    assert_eq!(parts.len(), 1, "only the prompt text, no image part");
+    assert!(parts[0]["text"].as_str().unwrap().contains("Italian"));
+}
+
 // ---------------------------------------------------------------------------
 // Failure paths
 // ---------------------------------------------------------------------------

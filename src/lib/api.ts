@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type {
   Annotation,
+  DocumentLabels,
   Rect,
   AppError,
   CaptureSource,
@@ -110,7 +111,22 @@ export const updateProjectMeta = (meta: {
   summary?: string;
   prerequisites?: string[];
   language?: string;
+  version?: string;
+  author?: string;
+  labels?: DocumentLabels;
 }) => call<Project>("update_project_meta", { meta });
+
+/** The guide's fixed labels in `language`, written by the AI. Nothing is saved. */
+export const translateLabels = (request: {
+  provider?: ProviderId;
+  model?: string;
+  language?: string;
+}) =>
+  call<DocumentLabels>("translate_labels", {
+    provider: request.provider ?? null,
+    model: request.model ?? null,
+    language: request.language ?? null,
+  });
 
 const framePathCache = new Map<string, string>();
 

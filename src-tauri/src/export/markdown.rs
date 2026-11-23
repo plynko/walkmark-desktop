@@ -28,13 +28,19 @@ pub fn write(
     let mut doc = String::new();
     doc.push_str(&format!("# {}\n\n", project.title.trim()));
 
+    let details = super::detail_parts(project, options);
+    if !details.is_empty() {
+        doc.push_str(&details.join(super::DETAIL_SEPARATOR));
+        doc.push_str("\n\n");
+    }
+
     if options.include_summary && !project.summary.trim().is_empty() {
         doc.push_str(project.summary.trim());
         doc.push_str("\n\n");
     }
 
     if options.include_prerequisites && !project.prerequisites.is_empty() {
-        doc.push_str("## Before you start\n\n");
+        doc.push_str(&format!("## {}\n\n", project.labels.prerequisites()));
         for item in &project.prerequisites {
             doc.push_str(&format!("- {}\n", item.trim()));
         }

@@ -437,6 +437,9 @@ pub struct ProjectMeta {
     pub summary: Option<String>,
     pub prerequisites: Option<Vec<String>>,
     pub language: Option<String>,
+    pub version: Option<String>,
+    pub author: Option<String>,
+    pub labels: Option<DocumentLabels>,
 }
 
 #[tauri::command]
@@ -471,6 +474,22 @@ pub fn update_project_meta(
     }
     if let Some(language) = meta.language {
         project.language = limits::clamp_trim(&language, limits::LANGUAGE);
+    }
+    if let Some(version) = meta.version {
+        project.version = limits::clamp_trim(&version, limits::DOCUMENT_VERSION);
+    }
+    if let Some(author) = meta.author {
+        project.author = limits::clamp_trim(&author, limits::DOCUMENT_AUTHOR);
+    }
+    if let Some(labels) = meta.labels {
+        let clean = |text: String| limits::clamp_trim(&text, limits::DOCUMENT_LABEL);
+        project.labels = DocumentLabels {
+            guide: clean(labels.guide),
+            prerequisites: clean(labels.prerequisites),
+            exported: clean(labels.exported),
+            version: clean(labels.version),
+            author: clean(labels.author),
+        };
     }
     project.touch();
     storage::save_project(&app, project)?;
@@ -905,6 +924,36 @@ menu — for Mistral, use Small or Large."
         }
     });
     Ok(())
+}
+
+/// Fixed labels ("Before you start", "Version", …) in the guide's language.
+/// Returns them for the caller to review and save; nothing is stored here.
+#[tauri::command]
+pub async fn translate_labels(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    provider: Option<String>,
+    model: Option<String>,
+    language: Option<String>,
+) -> Result<DocumentLabels> {
+    let language = {
+        let project_language = state
+            .project
+            .lock()
+            .as_ref()
+            .map(|p| p.language.clone())
+            .filter(|l| !l.trim().is_empty());
+        language
+            .filter(|l| !l.trim().is_empty())
+            .or(project_language)
+            .unwrap_or_else(|| state.settings.lock().language.clone())
+    };
+    let overrides = ai::GenerationOverrides {
+        provider: provider.as_deref().and_then(Provider::parse),
+        model,
+        language: None,
+    };
+    ai::translate_labels(&app, &language, &overrides).await
 }
 
 #[tauri::command]

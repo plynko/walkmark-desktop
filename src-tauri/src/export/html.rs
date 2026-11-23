@@ -12,9 +12,17 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
 
     let mut body = String::new();
     body.push_str(&format!(
-        "<header class=\"doc-head\">\n<p class=\"eyebrow\">Step-by-step guide</p>\n<h1>{}</h1>\n",
+        "<header class=\"doc-head\">\n<p class=\"eyebrow\">{}</p>\n<h1>{}</h1>\n",
+        esc(project.labels.guide()),
         esc(&project.title)
     ));
+    let details = super::detail_parts(project, options);
+    if !details.is_empty() {
+        body.push_str(&format!(
+            "<p class=\"details\">{}</p>\n",
+            esc(&details.join(super::DETAIL_SEPARATOR))
+        ));
+    }
     if options.include_summary && !project.summary.trim().is_empty() {
         body.push_str(&format!(
             "<div class=\"lede prose\">{}</div>\n",
@@ -28,7 +36,10 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
     ));
 
     if options.include_prerequisites && !project.prerequisites.is_empty() {
-        body.push_str("<aside class=\"callout\">\n<h2>Before you start</h2>\n<ul>\n");
+        body.push_str(&format!(
+            "<aside class=\"callout\">\n<h2>{}</h2>\n<ul>\n",
+            esc(project.labels.prerequisites())
+        ));
         for item in &project.prerequisites {
             body.push_str(&format!("<li>{}</li>\n", esc(item)));
         }
@@ -174,6 +185,7 @@ main{min-width:0; max-width:820px}
 .doc-head{margin:0 0 40px}
 .eyebrow{margin:0 0 10px; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent)}
 h1{margin:0; font-size:clamp(30px,4.4vw,42px); line-height:1.15; letter-spacing:-.02em; font-weight:680}
+.details{margin:12px 0 0; font-size:13px; color:var(--muted)}
 .lede{margin:16px 0 0; font-size:18px; line-height:1.6; color:var(--muted); max-width:62ch}
 .meta{margin:20px 0 0; font-size:13px; color:var(--muted)}
 
@@ -217,3 +229,56 @@ figure img{
   a{color:inherit; text-decoration:none}
 }
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn steps() -> Vec<RenderedStep> {
+        vec![RenderedStep {
+            number: 1,
+            title: "Apri l'app".into(),
+            body: String::new(),
+            image: None,
+        }]
+    }
+
+    #[test]
+    fn translated_labels_replace_the_english_wording() {
+        let mut project = Project::new("Installazione", "");
+        project.prerequisites = vec!["Un account".into()];
+        project.author = "Erik".into();
+        project.labels.guide = "Guida passo passo".into();
+        project.labels.prerequisites = "Prima di iniziare".into();
+        project.labels.exported = "Esportato il".into();
+        project.labels.version = "Versione".into();
+        project.labels.author = "Autore".into();
+        let options = ExportOptions {
+            exported_on: "2026-11-23".into(),
+            ..Default::default()
+        };
+
+        let html = render(&project, &steps(), &options);
+        assert!(html.contains("<p class=\"eyebrow\">Guida passo passo</p>"));
+        assert!(html.contains("<h2>Prima di iniziare</h2>"));
+        assert!(html.contains(
+            "<p class=\"details\">Esportato il 2026-11-23 · Versione 1.0 · Autore Erik</p>"
+        ));
+        assert!(!html.contains("Before you start"));
+    }
+
+    #[test]
+    fn default_labels_stay_english_and_details_can_be_hidden() {
+        let mut project = Project::new("Guide", "");
+        project.prerequisites = vec!["An account".into()];
+        let hidden = ExportOptions {
+            include_details: false,
+            exported_on: "2026-11-23".into(),
+            ..Default::default()
+        };
+        let html = render(&project, &steps(), &hidden);
+        assert!(html.contains("<p class=\"eyebrow\">Step-by-step guide</p>"));
+        assert!(html.contains("<h2>Before you start</h2>"));
+        assert!(!html.contains("<p class=\"details\">"));
+    }
+}

@@ -31,6 +31,7 @@ Best for: handbooks, compliance packets, printed runbooks, sign-off documents.
 | **Table of contents** | On | HTML (when more than two steps) |
 | **Summary** | On | All formats |
 | **Prerequisites** | On | All formats |
+| **Date, version and author** | On | All formats — a line under the title |
 | **Theme** | Auto | HTML only — light, dark, or follow system |
 
 After export, Walkmark can:

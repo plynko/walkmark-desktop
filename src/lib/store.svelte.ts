@@ -5,6 +5,7 @@ import * as api from "./api";
 import { newProduct } from "./products";
 import type {
   AppError,
+  DocumentLabels,
   GenerationProgress,
   LocalOverview,
   PermissionStatus,
@@ -72,6 +73,8 @@ class AppStore {
   /** Set while the main window initiated stop so we don't finalize twice. */
   finalizingFromMainStop = false;
   generation = $state<GenerationProgress | null>(null);
+  /** The AI is translating the guide's fixed labels. */
+  translatingLabels = $state(false);
   /** A stop was requested and the run has not wound down yet. */
   stoppingGeneration = $state(false);
   route = $state<Route>("library");
@@ -446,11 +449,42 @@ class AppStore {
     }
   }
 
+  /** Translate the guide's fixed labels with the AI chosen in the write menu. */
+  async translateLabels() {
+    const project = this.project;
+    if (!project || this.translatingLabels) return;
+    if (!this.canWriteWith(this.writeProvider) || !this.writeModel.trim()) {
+      this.openSettings("model");
+      this.notify({
+        tone: "info",
+        title: "Select an AI model",
+        detail: "Add a key or install a local model to translate with AI.",
+      });
+      return;
+    }
+    this.translatingLabels = true;
+    try {
+      const labels = await api.translateLabels({
+        provider: this.writeProvider,
+        model: this.writeModel,
+        language: this.writeLanguage,
+      });
+      if (this.project?.id === project.id) await this.patchMeta({ labels });
+    } catch (error) {
+      this.reportError(error, "Could not translate the labels");
+    } finally {
+      this.translatingLabels = false;
+    }
+  }
+
   async patchMeta(meta: {
     title?: string;
     summary?: string;
     prerequisites?: string[];
     language?: string;
+    version?: string;
+    author?: string;
+    labels?: DocumentLabels;
   }) {
     const current = this.project;
     if (!current) return;

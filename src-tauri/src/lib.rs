@@ -193,6 +193,7 @@ pub fn run() {
             commands::merge_steps,
             commands::generate,
             commands::cancel_generation,
+            commands::translate_labels,
             commands::suggest_export_name,
             commands::export_document,
             commands::copy_as_markdown,

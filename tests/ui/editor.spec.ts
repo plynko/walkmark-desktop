@@ -112,3 +112,75 @@ test.describe("settings", () => {
     await expect(app.page.getByRole("button", { name: "On this Mac", exact: true })).toBeVisible();
   });
 });
+
+test.describe("document details", () => {
+  const meta = async (app: { calls(cmd?: string): Promise<{ args: Record<string, unknown> }[]> }) =>
+    (await app.calls("update_project_meta")).map((call) => call.args.meta);
+
+  test("shows the wording exports use until it is changed", async ({ app }) => {
+    await app.openGuide();
+    const page = app.page;
+    await expect(page.getByRole("textbox", { name: "Guide label" })).toHaveAttribute("placeholder", "Step-by-step guide");
+    await expect(page.getByRole("textbox", { name: "Prerequisites heading" })).toHaveAttribute("placeholder", "Before you start");
+    await expect(page.getByRole("textbox", { name: "Version", exact: true })).toHaveValue("1.0");
+    await expect(page.getByRole("textbox", { name: "Author", exact: true })).toHaveValue("");
+  });
+
+  test("the “Before you start” heading is editable", async ({ app }) => {
+    await app.openGuide();
+    const heading = app.page.getByRole("textbox", { name: "Prerequisites heading" });
+    await heading.fill("Prima di iniziare");
+    await heading.press("Enter");
+    await expect.poll(() => meta(app)).toEqual([
+      { labels: { guide: "", prerequisites: "Prima di iniziare", exported: "", version: "", author: "" } },
+    ]);
+  });
+
+  test("the guide label above the title is editable", async ({ app }) => {
+    await app.openGuide();
+    const label = app.page.getByRole("textbox", { name: "Guide label" });
+    await label.fill("Guida passo passo");
+    await label.press("Enter");
+    await expect.poll(async () => (await meta(app))[0]).toMatchObject({
+      labels: { guide: "Guida passo passo" },
+    });
+  });
+
+  test("version and author are saved", async ({ app }) => {
+    await app.openGuide();
+    const version = app.page.getByRole("textbox", { name: "Version", exact: true });
+    await version.fill("2.3");
+    await version.press("Enter");
+    const author = app.page.getByRole("textbox", { name: "Author", exact: true });
+    await author.fill("Erik");
+    await author.press("Enter");
+    await expect.poll(() => meta(app)).toEqual([{ version: "2.3" }, { author: "Erik" }]);
+  });
+
+  test("an unchanged field saves nothing", async ({ app }) => {
+    await app.openGuide();
+    const version = app.page.getByRole("textbox", { name: "Version", exact: true });
+    await version.click();
+    await version.press("Enter");
+    expect(await meta(app)).toEqual([]);
+  });
+
+  test("translating fills every label from the AI", async ({ app }) => {
+    await app.openGuide();
+    await app.page.getByRole("button", { name: "Translate labels" }).click();
+    await expect(app.page.getByRole("textbox", { name: "Guide label" })).toHaveValue("Guida passo passo");
+    await expect(app.page.getByRole("textbox", { name: "Prerequisites heading" })).toHaveValue("Prima di iniziare");
+    await expect(app.page.getByRole("textbox", { name: "Export date label" })).toHaveValue("Esportato il");
+    await expect(app.page.getByRole("textbox", { name: "Version label" })).toHaveValue("Versione");
+    await expect(app.page.getByRole("textbox", { name: "Author label" })).toHaveValue("Autore");
+    expect(await app.calls("translate_labels")).toHaveLength(1);
+  });
+});
+
+test.describe("export", () => {
+  test("offers the details line as an option", async ({ app }) => {
+    await app.openGuide();
+    await app.page.getByRole("button", { name: "Export", exact: true }).click();
+    await expect(app.page.getByText("Include date, version and author")).toBeVisible();
+  });
+});

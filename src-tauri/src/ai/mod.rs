@@ -13,7 +13,9 @@ use tokio::sync::Semaphore;
 
 use crate::error::{AppError, Result};
 use crate::imaging;
-use crate::models::{GenerationProgress, Project, Rect, Settings, Step, StepStatus};
+use crate::models::{
+    DocumentLabels, GenerationProgress, Project, Rect, Settings, Step, StepStatus,
+};
 use crate::state::AppState;
 use crate::storage;
 
@@ -394,6 +396,31 @@ pub async fn run(
     emit_progress(&app, done, total, false, None);
     emit_done(&app, cancelled, done.saturating_sub(failed), failed);
     Ok(())
+}
+
+/// The guide's fixed labels in `language`. English needs no request: empty
+/// labels already mean the English defaults.
+pub async fn translate_labels(
+    app: &AppHandle,
+    language: &str,
+    overrides: &GenerationOverrides,
+) -> Result<DocumentLabels> {
+    let language = crate::limits::clamp_trim(language, crate::limits::LANGUAGE);
+    if language.is_empty() || language.eq_ignore_ascii_case("english") {
+        return Ok(DocumentLabels::default());
+    }
+
+    let settings: Settings = app.state::<AppState>().settings.lock().clone();
+    let client = client_for_overrides(app, &settings, overrides)?;
+    let translated = client.translate_labels(&language).await?;
+    let clean = |text: String| crate::limits::clamp_trim(&text, crate::limits::DOCUMENT_LABEL);
+    Ok(DocumentLabels {
+        guide: clean(translated.guide),
+        prerequisites: clean(translated.prerequisites),
+        exported: clean(translated.exported),
+        version: clean(translated.version),
+        author: clean(translated.author),
+    })
 }
 
 /// Resolves once the run has been asked to stop.

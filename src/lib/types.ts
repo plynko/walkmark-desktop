@@ -59,6 +59,15 @@ export interface Step {
   manual: boolean;
 }
 
+/** Wording exports print around the guide's own text. Empty means the English default. */
+export interface DocumentLabels {
+  guide: string;
+  prerequisites: string;
+  exported: string;
+  version: string;
+  author: string;
+}
+
 export interface Project {
   /** Layout version of project.json; absent in projects saved before 0.2.2. */
   schemaVersion?: number;
@@ -73,6 +82,11 @@ export interface Project {
   productId?: string | null;
   /** Language the AI should write this document in. */
   language: string;
+  /** Revision of the guide, printed under the title. */
+  version: string;
+  /** Who made the guide, printed under the title. */
+  author: string;
+  labels: DocumentLabels;
   steps: Step[];
   deletedSteps?: { index: number; step: Step }[];
 }
@@ -179,6 +193,8 @@ export interface ExportOptions {
   includeToc: boolean;
   includeSummary: boolean;
   includePrerequisites: boolean;
+  /** The line under the title: export date, version and author. */
+  includeDetails: boolean;
   theme: "auto" | "light" | "dark";
 }
 

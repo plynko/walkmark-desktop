@@ -107,6 +107,10 @@ Defaults in **Settings → Writing** (and the source picker before recording):
 
 Screenshots and prompts are sent **only when you click Write**, and only to the provider or endpoint you configured. See [Privacy and data](privacy.md).
 
+## Translating the fixed wording
+
+Exports print a few fixed words around your text: the heading above the title, “Before you start”, and “Exported”, “Version” and “Author” in the line under the title. In the editor, **Translate labels** asks the model selected in the write menu to translate them into the guide's language. It sends only those five short labels, no screenshots, and changes nothing else. You can edit the result, or type your own wording from the start.
+
 ## Stopping a write job
 
 Select **Stop** (the ✕ next to the progress count in the top bar) to cancel. Requests already in flight are abandoned immediately. Steps that were finished stay written, and the rest return to how they were before the job started.

@@ -22,6 +22,12 @@ pub struct ExportOptions {
     pub include_toc: bool,
     pub include_summary: bool,
     pub include_prerequisites: bool,
+    /// The line under the title with the export date, version and author.
+    #[serde(default = "default_true")]
+    pub include_details: bool,
+    /// Filled in by `write` when the document is produced; ignored on input.
+    #[serde(default)]
+    pub exported_on: String,
     /// HTML only. "light" | "dark" | "auto"
     pub theme: String,
 }
@@ -35,10 +41,39 @@ impl Default for ExportOptions {
             include_toc: true,
             include_summary: true,
             include_prerequisites: true,
+            include_details: true,
+            exported_on: String::new(),
             theme: "auto".into(),
         }
     }
 }
+
+fn default_true() -> bool {
+    true
+}
+
+/// The parts of the line under the title, e.g. `["Exported 2026-11-23",
+/// "Version 1.0", "Author Erik"]`. Version and author are left out while empty.
+/// Labels come from the guide, so a translated guide gets translated details.
+pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<String> {
+    if !options.include_details {
+        return Vec::new();
+    }
+    let labels = &project.labels;
+    let mut parts = Vec::new();
+    if !options.exported_on.is_empty() {
+        parts.push(format!("{} {}", labels.exported(), options.exported_on));
+    }
+    if !project.version.trim().is_empty() {
+        parts.push(format!("{} {}", labels.version(), project.version.trim()));
+    }
+    if !project.author.trim().is_empty() {
+        parts.push(format!("{} {}", labels.author(), project.author.trim()));
+    }
+    parts
+}
+
+pub(crate) const DETAIL_SEPARATOR: &str = " · ";
 
 /// A step flattened into exactly what a writer needs: final text, final pixels.
 pub struct RenderedStep {
@@ -124,6 +159,9 @@ pub fn write(
     destination: &Path,
 ) -> Result<ExportResult> {
     let steps = prepare(app, project, options)?;
+    let mut options = options.clone();
+    options.exported_on = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let options = &options;
     if let Some(parent) = destination.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -183,11 +221,71 @@ pub(crate) fn assets_dir_for(destination: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::DocumentLabels;
 
     #[test]
     fn slugs_are_url_safe() {
         assert_eq!(slugify("Creating a New Invoice"), "creating-a-new-invoice");
         assert_eq!(slugify("  Spaces  &  symbols!! "), "spaces-symbols");
         assert_eq!(slugify("!!!"), "walkmark-document");
+    }
+
+    fn dated() -> ExportOptions {
+        ExportOptions {
+            exported_on: "2026-11-23".into(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn details_use_the_guides_own_labels() {
+        let mut project = Project::new("Guida", "");
+        project.author = "Erik".into();
+        assert_eq!(
+            detail_parts(&project, &dated()),
+            ["Exported 2026-11-23", "Version 1.0", "Author Erik"]
+        );
+
+        project.labels.exported = "Esportato il".into();
+        project.labels.version = "Versione".into();
+        project.labels.author = "Autore".into();
+        project.version = "2.1".into();
+        assert_eq!(
+            detail_parts(&project, &dated()),
+            ["Esportato il 2026-11-23", "Versione 2.1", "Autore Erik"]
+        );
+    }
+
+    #[test]
+    fn details_skip_empty_fields_and_can_be_turned_off() {
+        let mut project = Project::new("Guide", "");
+        project.version = "  ".into();
+        assert_eq!(detail_parts(&project, &dated()), ["Exported 2026-11-23"]);
+
+        let off = ExportOptions {
+            include_details: false,
+            ..dated()
+        };
+        assert!(detail_parts(&project, &off).is_empty());
+    }
+
+    #[test]
+    fn empty_labels_fall_back_to_english() {
+        let labels = DocumentLabels {
+            guide: "  ".into(),
+            prerequisites: "Prima di iniziare".into(),
+            ..Default::default()
+        };
+        assert_eq!(labels.guide(), "Step-by-step guide");
+        assert_eq!(labels.prerequisites(), "Prima di iniziare");
+    }
+
+    #[test]
+    fn older_projects_get_default_details() {
+        let json = r#"{"id":"a","title":"Old","createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z"}"#;
+        let project: Project = serde_json::from_str(json).unwrap();
+        assert_eq!(project.version, "1.0");
+        assert_eq!(project.author, "");
+        assert_eq!(project.labels, DocumentLabels::default());
     }
 }
