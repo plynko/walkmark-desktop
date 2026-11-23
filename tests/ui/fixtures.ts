@@ -53,12 +53,21 @@ function installTauriMock(language: string) {
     baseUrlEditable: local,
     baseUrlRequired: false,
     defaultBaseUrl: local ? "http://127.0.0.1:11434" : "",
-    defaultModel: local ? "qwen3-vl:8b" : "gemini-3.6-flash",
-    models: local ? [] : [{ id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", note: "", tier: "recommended" }],
+    defaultModel: local ? "qwen3-vl:8b" : id === "anthropic" ? "claude-sonnet-5-5" : "gemini-3.6-flash",
+    models: local
+      ? []
+      : id === "anthropic"
+        ? [{ id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", note: "", tier: "recommended" }]
+        : [{ id: "gemini-3.6-flash", name: "Gemini 3.6 Flash", note: "", tier: "recommended" }],
   });
   const catalog = {
-    providers: [provider("gemini", "Google Gemini", false), provider("ollama", "On this Mac", true)],
-    configured: ["gemini"],
+    providers: [
+      provider("gemini", "Google Gemini", false),
+      provider("anthropic", "Claude", false),
+      provider("ollama", "On this Mac", true),
+    ],
+    // Keys saved for two cloud providers, as a user with both would have.
+    configured: ["gemini", "anthropic"],
   };
   const local = {
     running: true,

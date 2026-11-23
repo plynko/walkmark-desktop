@@ -168,9 +168,34 @@ class AppStore {
     return "Select model";
   }
 
-  syncWriteSelection() {
+  /**
+   * Keeps the write menu on something usable. A pick made in the write menu
+   * survives until `followDefault` is set, which means the default in Settings
+   * just changed and the menu should move to it.
+   */
+  syncWriteSelection(followDefault = false) {
     this.syncWriteLanguage();
     const fallback = this.writeOptions[0];
+    const wanted = this.activeConfig.model;
+    const preferred = () =>
+      this.writeOptions.find((o) => o.provider === this.settings.provider && o.model === wanted) ??
+      this.writeOptions.find((o) => o.provider === this.settings.provider);
+
+    if (followDefault) {
+      const pick = preferred();
+      if (pick) {
+        this.writeProvider = pick.provider;
+        this.writeModel = pick.model;
+      } else {
+        // The new default cannot write yet (no key, or Ollama is not ready).
+        // Show it anyway, so the reason is explained, instead of quietly
+        // carrying on with the previous provider.
+        this.writeProvider = this.settings.provider;
+        this.writeModel = wanted;
+      }
+      return;
+    }
+
     if (!fallback) {
       this.writeProvider = this.settings.provider;
       const info = this.activeProvider;
@@ -185,8 +210,7 @@ class AppStore {
       (o) => o.provider === this.writeProvider && o.model === this.writeModel,
     );
     if (!current) {
-      const preferred = this.writeOptions.find((o) => o.provider === this.settings.provider);
-      const pick = preferred ?? fallback;
+      const pick = preferred() ?? fallback;
       this.writeProvider = pick.provider;
       this.writeModel = pick.model;
     }
@@ -323,11 +347,13 @@ class AppStore {
 
   async updateSettings(patch: Partial<Settings>) {
     const next = { ...this.settings, ...patch };
+    const before = `${this.settings.provider}/${this.activeConfig.model}`;
     this.settings = next;
     try {
       this.settings = await api.saveSettings(next);
       this.applyTheme();
-      this.syncWriteSelection();
+      // Choosing a different default in Settings changes what Write uses too.
+      this.syncWriteSelection(before !== `${this.settings.provider}/${this.activeConfig.model}`);
     } catch (error) {
       this.reportError(error, "Your settings could not be saved");
     }

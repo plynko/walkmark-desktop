@@ -103,6 +103,33 @@ test.describe("step text", () => {
   });
 });
 
+test.describe("choosing the AI", () => {
+  // The mocked backend never finishes a run, so each test presses Write once.
+  const write = async (app: { page: import("@playwright/test").Page; calls(cmd?: string): Promise<{ args: Record<string, unknown> }[]> }) => {
+    await app.page.getByRole("button", { name: /^Write \d+ steps?/ }).click();
+    return (await app.calls("generate")).at(-1)!.args;
+  };
+
+  test("Write goes to the default engine out of the box", async ({ app }) => {
+    await app.openGuide();
+    expect((await write(app)).provider).toBe("gemini");
+  });
+
+  test("a new default in Settings is what Write uses", async ({ app }) => {
+    await app.openGuide();
+    await app.page.getByRole("button", { name: "Settings", exact: true }).click();
+    await app.page.getByRole("tab", { name: "Model" }).click();
+    await app.page.getByRole("button", { name: "Google Gemini", exact: true }).click();
+    await app.page.getByRole("option", { name: "Claude" }).click();
+    await app.page.getByRole("button", { name: "Done" }).click();
+
+    await expect(app.page.getByText(/^Claude · /)).toBeVisible();
+    const args = await write(app);
+    expect(args.provider).toBe("anthropic");
+    expect(args.model).toBe("claude-sonnet-5-5");
+  });
+});
+
 test.describe("settings", () => {
   test("switches the model provider without errors", async ({ app }) => {
     await app.page.getByRole("button", { name: "Settings", exact: true }).click();
