@@ -20,7 +20,7 @@ import type {
 } from "./types";
 
 export type Route = "library" | "editor";
-export type DialogName = "settings" | "export" | "sources" | "onboarding" | null;
+export type DialogName = "settings" | "export" | "sources" | "capture-step" | "onboarding" | null;
 
 const defaultProduct = newProduct("General");
 
@@ -461,6 +461,7 @@ class AppStore {
   }
 
   async beginRecording(sourceId: string, productId?: string | null) {
+    if (this.stepImportPending) return;
     try {
       const project = await api.startRecording(sourceId, productId);
       if (productId) void this.updateSettings({ defaultProductId: productId });
@@ -578,23 +579,41 @@ class AppStore {
     this.selection = [];
   }
 
-  async importStep() {
+  private async addStep(load: (projectId: string, afterStepId: string | null) =>
+    Promise<api.AddedStep | null>,
+  ) {
     const projectId = this.project?.id;
     if (!projectId || this.recording || this.stepImportPending || this.stepDeletionPending) return;
     const afterStepId = this.focused && this.selection.includes(this.focused) ? this.focused : null;
     this.stepImportPending = true;
     try {
-      const imported = await api.importStep(projectId, afterStepId);
+      const imported = await load(projectId, afterStepId);
       if (imported && this.project?.id === projectId) {
         this.project = imported.project;
         this.selection = [];
         this.focused = imported.stepId;
+        return true;
       }
     } catch (error) {
       this.reportError(error, "Could not add the screenshot");
     } finally {
       this.stepImportPending = false;
     }
+  }
+
+  importStep() {
+    return this.addStep(api.importStep);
+  }
+
+  pasteStep() {
+    return this.addStep(api.pasteStep);
+  }
+
+  async captureStep(sourceId: string) {
+    const captured = await this.addStep((projectId, afterStepId) =>
+      api.captureStep(projectId, afterStepId, sourceId),
+    );
+    if (captured && this.dialog === "capture-step") this.closeDialog();
   }
 
   async patchStep(id: string, patch: api.StepPatch) {

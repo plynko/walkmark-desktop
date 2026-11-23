@@ -33,16 +33,20 @@
 		ref = $bindable(null),
 		href = undefined,
 		type = 'button',
+		title,
 		disabled,
 		children,
 		...restProps
 	}: ButtonProps = $props();
+	const hint = $derived(size === 'icon' ? title ?? restProps['aria-label'] : undefined);
 </script>
 
 {#if href}
 	<a
 		bind:this={ref}
 		data-slot="button"
+		data-tooltip={hint}
+		title={hint ? undefined : title}
 		class={cn(
 			'inline-flex cursor-pointer select-none items-center justify-center whitespace-nowrap outline-none transition-all duration-150 [&_svg]:pointer-events-none [&_svg]:shrink-0 disabled:pointer-events-none disabled:opacity-40',
 			variants[variant],
@@ -61,10 +65,13 @@
 	<button
 		bind:this={ref}
 		data-slot="button"
+		data-tooltip={hint}
+		title={hint ? undefined : title}
 		class={cn(
 			'inline-flex cursor-pointer select-none items-center justify-center whitespace-nowrap outline-none transition-all duration-150 [&_svg]:pointer-events-none [&_svg]:shrink-0 disabled:pointer-events-none disabled:opacity-40',
 			variants[variant],
 			sizes[size],
+			hint && 'disabled:pointer-events-auto',
 			className
 		)}
 		{type}

@@ -7,6 +7,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { cn } from '$lib/utils';
 	import { LIMITS } from '$lib/limits';
+	import { autosize } from '$lib/autosize';
+	import MarkdownField from './MarkdownField.svelte';
 
 	const project = $derived(store.project!);
 	const recording = $derived(store.recording);
@@ -21,12 +23,10 @@
 	// Title field
 	let titleDraft = $state('');
 	let titleEditing = $state(false);
-	let titleRef = $state<HTMLTextAreaElement | null>(null);
 
 	// Summary field
 	let summaryDraft = $state('');
 	let summaryEditing = $state(false);
-	let summaryRef = $state<HTMLTextAreaElement | null>(null);
 
 	// Prerequisites
 	let addingPrereq = $state(false);
@@ -38,18 +38,6 @@
 	});
 	$effect(() => {
 		if (!summaryEditing) summaryDraft = project.summary;
-	});
-	$effect(() => {
-		const node = titleRef;
-		if (!node) return;
-		node.style.height = 'auto';
-		node.style.height = `${node.scrollHeight}px`;
-	});
-	$effect(() => {
-		const node = summaryRef;
-		if (!node) return;
-		node.style.height = 'auto';
-		node.style.height = `${node.scrollHeight}px`;
 	});
 	$effect(() => {
 		if (addingPrereq) prereqInputRef?.focus();
@@ -91,7 +79,7 @@
 	</div>
 
 	<textarea
-		bind:this={titleRef}
+		use:autosize={titleDraft}
 		rows={1}
 		bind:value={titleDraft}
 		placeholder="Untitled guide"
@@ -110,9 +98,8 @@
 		class="-mx-1.5 w-full resize-none overflow-hidden rounded-xl bg-transparent px-1.5 py-0.5 text-[27px] font-semibold leading-[1.2] tracking-[-0.02em] outline-none placeholder:text-(--text)/40 hover:bg-(--text)/5 focus:bg-(--text)/8 focus:ring-1 focus:ring-(--text)/24"
 	></textarea>
 
-	<textarea
-		bind:this={summaryRef}
-		rows={1}
+	<MarkdownField
+		label="Guide summary"
 		bind:value={summaryDraft}
 		placeholder="Add a sentence about what this guide covers and when to use it."
 		maxlength={LIMITS.documentSummary}
@@ -128,7 +115,7 @@
 			}
 		}}
 		class="mt-2.5 -mx-1.5 w-full resize-none overflow-hidden rounded-xl bg-transparent px-1.5 py-0.5 text-[14.5px] leading-relaxed text-(--text)/72 outline-none placeholder:text-(--text)/40 hover:bg-(--text)/5 focus:bg-(--text)/8 focus:ring-1 focus:ring-(--text)/24"
-	></textarea>
+	/>
 
 	{#if project.prerequisites.length === 0 && !addingPrereq}
 		<button
@@ -151,7 +138,7 @@
 						<span class="min-w-0 flex-1 truncate text-[13px] text-(--text)/72">{item}</span>
 						<button
 							type="button"
-							aria-label="Remove “{item}”"
+							aria-label="Remove “{item}”" data-tooltip=""
 							onclick={() =>
 								patchMeta({
 									prerequisites: project.prerequisites.filter((_, i) => i !== index)

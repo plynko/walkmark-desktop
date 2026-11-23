@@ -143,11 +143,17 @@ export interface StepPatch {
   crop?: Rect | null;
 }
 
+export type AddedStep = { project: Project; stepId: string };
+
 export const importStep = (projectId: string, afterStepId: string | null) =>
-  call<{ project: Project; stepId: string } | null>("import_step", {
+  call<AddedStep | null>("import_step", {
     projectId,
     afterStepId,
   });
+export const captureStep = (projectId: string, afterStepId: string | null, sourceId: string) =>
+  call<AddedStep>("capture_step", { projectId, afterStepId, sourceId });
+export const pasteStep = (projectId: string, afterStepId: string | null) =>
+  call<AddedStep>("paste_step", { projectId, afterStepId });
 
 export const updateStep = (id: string, patch: StepPatch) =>
   call<Step>("update_step", { id, patch });
@@ -189,5 +195,6 @@ export const suggestExportName = (format: ExportFormat) =>
 export const exportDocument = (options: ExportOptions, destination: string) =>
   call<ExportResult>("export_document", { options, destination });
 export const copyAsMarkdown = () => call<string>("copy_as_markdown");
+export const previewMarkdown = (text: string) => call<string>("preview_markdown", { text });
 export const revealInFolder = (path: string) =>
   call<void>("reveal_in_folder", { path });

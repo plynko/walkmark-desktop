@@ -9,6 +9,7 @@
 	import { Toaster } from "$lib/components/ui/sonner";
 	import AppBootSkeleton from "$lib/components/skeletons/AppBootSkeleton.svelte";
 	import { Button } from "$lib/components/ui/button";
+	import ActionTooltips from "$lib/components/ui/ActionTooltips.svelte";
 
 	import TopBar from "$lib/components/TopBar.svelte";
 	import Library from "$lib/components/Library.svelte";
@@ -59,7 +60,7 @@
 			const mod = event.metaKey || event.ctrlKey;
 			if (mod && event.key.toLowerCase() === "r" && !event.shiftKey) {
 				event.preventDefault();
-				if (!store.recording) store.setDialog("sources");
+				if (!store.recording && !store.stepImportPending) store.setDialog("sources");
 			} else if (mod && event.key.toLowerCase() === "e") {
 				event.preventDefault();
 				if (store.project) store.setDialog("export");
@@ -79,6 +80,7 @@
 	});
 </script>
 
+<ActionTooltips />
 <ModeWatcher />
 
 {#if isHud}
@@ -107,7 +109,11 @@
 			{/if}
 		</main>
 
-		<SourcePicker open={store.dialog === "sources"} onClose={close} />
+		<SourcePicker
+			open={store.dialog === "sources" || store.dialog === "capture-step"}
+			singleStep={store.dialog === "capture-step"}
+			onClose={close}
+		/>
 		<SettingsDialog open={store.dialog === "settings"} onClose={close} />
 		<ExportDialog open={store.dialog === "export"} onClose={close} />
 		<Onboarding open={store.dialog === "onboarding"} onClose={close} />

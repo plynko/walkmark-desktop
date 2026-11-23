@@ -12,6 +12,7 @@
 	import FrameImage from './FrameImage.svelte';
 	import ImageEditorOverlay from './ImageEditorOverlay.svelte';
 	import ScreenshotViewport from './ScreenshotViewport.svelte';
+	import MarkdownField from './MarkdownField.svelte';
 	import * as api from '$lib/api';
 
 	let { step, index }: { step: Step; index: number } = $props();
@@ -48,7 +49,6 @@
 	// Body draft
 	let bodyDraft = $state('');
 	let bodyEditing = $state(false);
-	let bodyRef = $state<HTMLTextAreaElement | null>(null);
 	let textSave = Promise.resolve(true);
 	let startingRewrite = $state(false);
 
@@ -95,12 +95,6 @@
 	});
 	$effect(() => {
 		if (!bodyEditing) bodyDraft = step.body;
-	});
-	$effect(() => {
-		const node = bodyRef;
-		if (!node) return;
-		node.style.height = 'auto';
-		node.style.height = `${node.scrollHeight}px`;
 	});
 
 	let frameUrl = $state<string | null>(null);
@@ -168,9 +162,8 @@
 					}}
 					class="w-full rounded-xl bg-transparent px-1 py-0.5 -mx-1 text-base font-semibold leading-snug tracking-[-0.011em] outline-none placeholder:font-normal placeholder:text-(--text)/40 hover:bg-(--text)/5 focus:bg-(--text)/8 focus:ring-1 focus:ring-(--text)/24"
 				/>
-				<textarea
-					bind:this={bodyRef}
-					rows={1}
+				<MarkdownField
+					label="Step description"
 					bind:value={bodyDraft}
 					maxlength={LIMITS.stepBody}
 					placeholder={ready
@@ -185,7 +178,7 @@
 						}
 					}}
 					class="mt-1 -mx-1 w-full resize-none overflow-hidden rounded-xl bg-transparent px-1 py-0.5 text-[13.5px] leading-relaxed text-(--text)/72 outline-none placeholder:text-(--text)/40 hover:bg-(--text)/5 focus:bg-(--text)/8 focus:text-(--text) focus:ring-1 focus:ring-(--text)/24"
-				></textarea>
+				/>
 			{/if}
 		</div>
 
@@ -288,7 +281,7 @@
 						type="button"
 						onpointerdown={(event) => event.stopPropagation()}
 						onclick={() => openImageEditor(t.value)}
-						title="{t.label} — {t.hint}"
+						data-tooltip="{t.label} ({t.shortcut})"
 						aria-label={t.label}
 						class="grid size-7 place-items-center rounded-lg text-white/70 transition-colors hover:bg-white/15 hover:text-white"
 					>
@@ -301,7 +294,7 @@
 					type="button"
 					onpointerdown={(event) => event.stopPropagation()}
 					onclick={() => openImageEditor()}
-					title="Expand screenshot editor"
+					data-tooltip=""
 					aria-label="Expand screenshot editor"
 					class="grid size-7 place-items-center rounded-lg text-white/70 transition-colors hover:bg-white/15 hover:text-white"
 				>
@@ -322,6 +315,8 @@
 						type="button"
 						onpointerdown={(event) => event.stopPropagation()}
 						onclick={() => (showFrames = !showFrames)}
+						aria-expanded={showFrames}
+						data-tooltip="Pick another screenshot from just before or after this step"
 						class={cn(
 							'flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] backdrop-blur transition-colors',
 							showFrames
@@ -330,7 +325,7 @@
 						)}
 					>
 						<Icon icon="lucide:images" class="size-3" aria-hidden="true" />
-						Different moment
+						Choose another frame
 					</button>
 				{/if}
 			</div>
@@ -344,7 +339,7 @@
 				>
 					<div class="mb-2 flex items-center justify-between px-1">
 						<span class="text-[11.5px] font-medium text-white/80">
-							Pick the screenshot that shows the step best
+								Choose a nearby frame. Only the screenshot changes.
 						</span>
 						<button
 							type="button"
@@ -355,10 +350,13 @@
 						</button>
 					</div>
 					<div class="flex gap-2 overflow-x-auto pb-1">
-						{#each options as frame (frame)}
+						{#each options as frame, frameIndex (frame)}
 							{@const current = frame === step.frame}
 							<button
 								type="button"
+								aria-label={current ? "Current frame" : `Use frame ${frameIndex + 1}`}
+								aria-pressed={current}
+								data-tooltip=""
 								onclick={() => {
 									if (!current) {
 										patchStep({ frame });

@@ -22,10 +22,14 @@
 	import { cn } from '$lib/utils';
 	import type { Tone } from '$lib/types';
 
-	let { open = false, onClose }: { open?: boolean; onClose?: () => void } = $props();
+	let { open = false, singleStep = false, onClose }: {
+		open?: boolean;
+		singleStep?: boolean;
+		onClose?: () => void;
+	} = $props();
 
 	function handleOpenChange(value: boolean) {
-		if (!value) onClose?.();
+		if (!value && !starting) onClose?.();
 	}
 
 	let sources = $state<CaptureSource[] | null>(null);
@@ -45,6 +49,7 @@
 	const settings = $derived(store.settings);
 	const permission = $derived(store.permission);
 	const blocked = $derived(permission.required && !permission.granted);
+	const singleCountdown = $derived(Math.max(1, Math.min(10, settings.capture.countdownSecs)));
 
 	const visible = $derived.by(() => {
 		if (!sources) return [];
@@ -62,10 +67,11 @@
 		monitor: sources?.filter((s) => s.kind === 'monitor').length ?? 0,
 		window: sources?.filter((s) => s.kind === 'window').length ?? 0
 	});
+	const visibleSelection = $derived(visible.some((source) => source.id === selected) ? selected : null);
 
 	$effect(() => {
 		if (open) {
-			step = 'context';
+			step = singleStep ? 'capture' : 'context';
 			selectedProduct = null;
 			audience = store.settings.audience;
 			tone = store.settings.tone;
@@ -99,8 +105,9 @@
 			const found = await api.listSources(false);
 			if (requestToken !== token) return;
 			sources = found;
-			selected ??=
-				found.find((s) => s.kind === 'monitor' && s.isPrimary)?.id ?? found[0]?.id ?? null;
+			if (!found.some((source) => source.id === selected)) {
+				selected = found.find((s) => s.kind === 'monitor' && s.isPrimary)?.id ?? found[0]?.id ?? null;
+			}
 
 			const previews = await api.listSources(true);
 			if (requestToken !== token) return;
@@ -118,11 +125,15 @@
 		}
 	}
 
-	async function start() {
-		if (!selected) return;
+	async function start(sourceId = visibleSelection) {
+		if (!sourceId || starting) return;
 		starting = true;
-		await store.beginRecording(selected, selectedProduct);
-		starting = false;
+		try {
+			if (singleStep) await store.captureStep(sourceId);
+			else await store.beginRecording(sourceId, selectedProduct);
+		} finally {
+			starting = false;
+		}
 	}
 </script>
 
@@ -134,6 +145,9 @@
 				<DialogDescription>
 					Say who this guide is for. Pick a product if you want its vocabulary applied.
 				</DialogDescription>
+			{:else if singleStep}
+				<DialogTitle>Capture a screenshot</DialogTitle>
+				<DialogDescription>Choose a screen or window to add one screenshot to this guide.</DialogDescription>
 			{:else}
 				<DialogTitle>What should Walkmark watch?</DialogTitle>
 				<DialogDescription>
@@ -221,7 +235,8 @@
 						<button
 							type="button"
 							onclick={() => (selected = source.id)}
-							ondblclick={() => void start()}
+							ondblclick={() => void start(source.id)}
+							disabled={starting}
 							aria-pressed={selected === source.id}
 							class={cn(
 								'group relative overflow-hidden rounded-2xl bg-(--text)/5 text-left transition-all duration-150',
@@ -271,28 +286,34 @@
 			{/if}
 
 			<p class="mt-4 shrink-0 border-t border-(--text)/8 pt-3 text-[12px] leading-relaxed text-(--text)/56">
-				{settings.capture.hideWindow
+				{singleStep
+					? 'Walkmark will hide during the countdown, take one screenshot, then reopen your guide.'
+					: settings.capture.hideWindow
 					? 'Walkmark will step out of the way and leave a small floating controller on screen.'
 					: 'Walkmark will stay open. Its own window is never offered as a capture source.'}
 			</p>
 
 			<DialogFooter class="mt-4 shrink-0 sm:justify-between">
-				<Button variant="ghost" class="mr-auto" onclick={() => (step = 'context')}>
-					<Icon icon="lucide:arrow-left" class="size-3.5" />
-					Back
-				</Button>
-				<Button variant="ghost" onclick={() => store.openSettings('recording', 'sources')}>
-					<Icon icon="lucide:sliders-horizontal" class="size-3.5" />
-					Recording preferences
-				</Button>
-				<Button variant="ghost" onclick={() => onClose?.()}>Cancel</Button>
-				<Button disabled={!selected || starting} onclick={() => void start()}>
+				{#if !singleStep}
+					<Button variant="ghost" class="mr-auto" onclick={() => (step = 'context')}>
+						<Icon icon="lucide:arrow-left" class="size-3.5" />
+						Back
+					</Button>
+					<Button variant="ghost" onclick={() => store.openSettings('recording', 'sources')}>
+						<Icon icon="lucide:sliders-horizontal" class="size-3.5" />
+						Recording preferences
+					</Button>
+				{/if}
+				<Button variant="ghost" disabled={starting} onclick={() => onClose?.()}>Cancel</Button>
+				<Button disabled={!visibleSelection || starting} onclick={() => void start()}>
 					{#if starting}
 						<Spinner class="size-4" />
 					{:else}
 						<Icon icon="lucide:circle-dot" class="size-4" />
 					{/if}
-					{settings.capture.countdownSecs > 0
+					{singleStep
+						? `Capture in ${singleCountdown}s`
+						: settings.capture.countdownSecs > 0
 						? `Start in ${settings.capture.countdownSecs}s`
 						: 'Start recording'}
 				</Button>

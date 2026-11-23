@@ -64,7 +64,7 @@
 			<button
 				type="button"
 				class="mt-1 grid size-8 shrink-0 place-items-center rounded-xl text-(--text)/40 hover:bg-(--text)/5 hover:text-red-500"
-				aria-label="Remove term"
+				aria-label="Remove term" data-tooltip=""
 				onclick={() => removeTerm(entry.id)}
 			>
 				<Icon icon="lucide:trash-2" class="size-3.5" />

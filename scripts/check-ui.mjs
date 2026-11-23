@@ -161,6 +161,8 @@ await page.goto("http://localhost:1420/", { waitUntil: "networkidle" });
 
 const settingsButton = page.getByRole("button", { name: "Settings", exact: true });
 await settingsButton.locator("svg").waitFor({ state: "visible", timeout: 5000 });
+await settingsButton.hover();
+await page.getByRole("tooltip", { name: /^Settings \(/ }).waitFor({ state: "visible" });
 
 const bootText = await page.locator("body").innerText();
 const bootHtml = await page.locator("#root").innerHTML();

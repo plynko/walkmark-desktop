@@ -298,7 +298,7 @@
 							{...props}
 							type="button"
 							class="grid size-8 place-items-center rounded-xl bg-(--bg-elevated)/95 text-(--text)/72 shadow-sm ring-1 ring-(--text)/10 backdrop-blur-sm transition-colors hover:bg-(--bg-elevated) hover:text-(--text)"
-							aria-label="Document options for {project.title}"
+							aria-label="Document options for {project.title}" data-tooltip="Document options"
 							onclick={(event) => event.stopPropagation()}
 						>
 							<Icon icon="lucide:ellipsis" class="size-4" />

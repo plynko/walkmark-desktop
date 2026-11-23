@@ -1,6 +1,5 @@
 use base64::Engine;
-use pulldown_cmark::{html as cmark_html, Options as CmarkOptions, Parser};
-
+use crate::guide_markdown::render as markdown;
 use crate::models::Project;
 
 use super::{ExportOptions, RenderedStep};
@@ -17,7 +16,10 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
         esc(&project.title)
     ));
     if options.include_summary && !project.summary.trim().is_empty() {
-        body.push_str(&format!("<p class=\"lede\">{}</p>\n", esc(&project.summary)));
+        body.push_str(&format!(
+            "<div class=\"lede prose\">{}</div>\n",
+            markdown(&project.summary)
+        ));
     }
     body.push_str(&format!(
         "<p class=\"meta\">{} step{}</p>\n</header>\n",
@@ -100,15 +102,6 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
 
 fn anchor(step: &RenderedStep) -> String {
     super::slugify(&format!("step-{}-{}", step.number, step.title))
-}
-
-fn markdown(input: &str) -> String {
-    let mut opts = CmarkOptions::empty();
-    opts.insert(CmarkOptions::ENABLE_STRIKETHROUGH);
-    opts.insert(CmarkOptions::ENABLE_TABLES);
-    let mut out = String::new();
-    cmark_html::push_html(&mut out, Parser::new_ext(input, opts));
-    out
 }
 
 fn esc(text: &str) -> String {
@@ -199,6 +192,7 @@ h1{margin:0; font-size:clamp(30px,4.4vw,42px); line-height:1.15; letter-spacing:
 }
 .step h2{margin:0; font-size:21px; line-height:1.35; letter-spacing:-.011em; font-weight:640; padding-top:2px}
 .prose{margin:0 0 18px 44px; max-width:64ch}
+.lede.prose{margin:16px 0 0;max-width:62ch}
 .prose p{margin:0 0 12px}
 .prose p:last-child{margin-bottom:0}
 .prose code{background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:1px 5px; font-size:.88em}

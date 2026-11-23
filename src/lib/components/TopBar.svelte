@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
 	import { store } from "$lib/store.svelte";
-	import { pluralize } from "$lib/format";
+	import { pluralize, shortcutSymbols } from "$lib/format";
 	import { isMacOS } from "$lib/window";
 	import { Button } from "$lib/components/ui/button";
 	import { Spinner } from "$lib/components/ui/spinner";
@@ -131,7 +131,7 @@
 					</span>
 					<button
 						class="grid size-6 place-items-center rounded-xl text-(--text)/56 hover:bg-(--text)/8"
-						aria-label="Stop writing"
+						aria-label="Stop writing" data-tooltip=""
 						onclick={() => void store.stopGeneration()}
 					>
 						<Icon icon="lucide:x" class="size-3.5" />
@@ -154,6 +154,7 @@
 			type="button"
 			class="grid size-8 place-items-center rounded-2xl text-(--text)/56 transition-colors hover:bg-(--text)/5 hover:text-(--text)"
 			aria-label="Settings"
+			data-tooltip="Settings ({shortcutSymbols(['mod', ','])})"
 			onclick={() => store.setDialog("settings")}
 		>
 			<Icon icon="lucide:settings-2" class="size-4" />

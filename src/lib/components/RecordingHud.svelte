@@ -100,7 +100,7 @@
 			<button
 				type="button"
 				disabled={busy || finishing || counting}
-				title="Capture this moment · {shortcutSymbols(['shift', 'alt', 'M'])}"
+				data-tooltip="Capture this moment · {shortcutSymbols(['shift', 'alt', 'M'])}"
 				aria-label="Capture this moment ({shortcutSymbols(['shift', 'alt', 'M'])})"
 				onclick={() => void run(api.markStep)}
 				class="grid size-9 place-items-center rounded-xl bg-white/8 text-white/85 transition-all duration-150 hover:bg-white/15 hover:text-white active:scale-95 disabled:opacity-35"
@@ -111,7 +111,7 @@
 			<button
 				type="button"
 				disabled={busy || finishing || counting}
-				title="{paused ? 'Resume' : 'Pause'} · {shortcutSymbols(['shift', 'alt', 'P'])}"
+				data-tooltip="{paused ? 'Resume' : 'Pause'} · {shortcutSymbols(['shift', 'alt', 'P'])}"
 				aria-label="{paused ? 'Resume' : 'Pause'} ({shortcutSymbols(['shift', 'alt', 'P'])})"
 				onclick={() => void run(() => api.pauseRecording(!paused))}
 				class="grid size-9 place-items-center rounded-xl bg-white/8 text-white/85 transition-all duration-150 hover:bg-white/15 hover:text-white active:scale-95 disabled:opacity-35"
@@ -122,7 +122,7 @@
 			<button
 				type="button"
 				disabled={busy || finishing}
-				title="Finish recording · {shortcutSymbols(['shift', 'alt', 'S'])}"
+				data-tooltip="Finish recording · {shortcutSymbols(['shift', 'alt', 'S'])}"
 				aria-label="Finish recording ({shortcutSymbols(['shift', 'alt', 'S'])})"
 				onclick={() => void stop()}
 				class="grid size-9 place-items-center rounded-xl bg-[#f2555a] text-white transition-all duration-150 hover:brightness-110 active:scale-95 disabled:opacity-35"

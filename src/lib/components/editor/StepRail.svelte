@@ -4,6 +4,7 @@
 	import { store } from '$lib/store.svelte';
 	import { cn } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
+	import AddStepMenu from './AddStepMenu.svelte';
 	import FrameImage from './FrameImage.svelte';
 
 	const project = $derived(store.project);
@@ -34,17 +35,7 @@
 
 		{#if !store.recording}
 			<div class="px-3 pb-3">
-				<Button
-					size="sm"
-					variant="ghost"
-					class="w-full"
-					disabled={store.stepImportPending || store.stepDeletionPending}
-					title="Add a screenshot to this guide"
-					onclick={() => void store.importStep()}
-				>
-					<Icon icon="lucide:plus" class="size-3.5" aria-hidden="true" />
-					Add step
-				</Button>
+				<AddStepMenu class="w-full" />
 			</div>
 		{/if}
 
@@ -85,10 +76,10 @@
 				selected ? 'bg-(--text)/12' : active ? 'bg-(--text)/8' : 'hover:bg-(--text)/5'
 			)}
 		>
-			<div class="flex flex-none flex-col opacity-0 transition-opacity group-hover:opacity-100">
+			<div class="flex flex-none flex-col opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
 				<button
 					type="button"
-					aria-label="Move step up"
+					aria-label="Move step up" data-tooltip=""
 					disabled={index === 0}
 					onclick={() => store.moveStep(step.id, -1)}
 					class="grid size-4 place-items-center rounded text-(--text)/40 hover:bg-(--text)/8 hover:text-(--text) disabled:opacity-30"
@@ -97,7 +88,7 @@
 				</button>
 				<button
 					type="button"
-					aria-label="Move step down"
+					aria-label="Move step down" data-tooltip=""
 					disabled={index === total - 1}
 					onclick={() => store.moveStep(step.id, 1)}
 					class="grid size-4 place-items-center rounded text-(--text)/40 hover:bg-(--text)/8 hover:text-(--text) disabled:opacity-30"

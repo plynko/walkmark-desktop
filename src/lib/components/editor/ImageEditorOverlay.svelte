@@ -233,7 +233,7 @@
 							<button
 								type="button"
 								onclick={() => (tool = t.value)}
-								title="{t.label} ({t.shortcut})"
+								data-tooltip="{t.label} ({t.shortcut})"
 								aria-label={t.label}
 								aria-pressed={tool === t.value}
 								class={cn(
@@ -272,7 +272,7 @@
 							{#each colorOptions as option (option.hex)}
 								<button
 									type="button"
-									title={option.label}
+									data-tooltip=""
 									aria-label={option.label}
 									aria-pressed={activeColor === option.hex}
 									onclick={() => pickColor(option.hex)}
@@ -334,7 +334,7 @@
 							<button
 								type="button"
 								onclick={undo}
-								title="Undo (⌘Z)"
+								data-tooltip={isMac ? "Undo (⌘Z)" : "Undo (Ctrl+Z)"}
 								class="rounded-lg px-2.5 py-1.5 text-xs text-(--text)/56 hover:bg-(--text)/8 hover:text-(--text)"
 							>
 								Undo

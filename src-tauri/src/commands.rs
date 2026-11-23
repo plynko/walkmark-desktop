@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
 
 use crate::ai;
@@ -495,6 +496,11 @@ pub fn frame_path(app: AppHandle, project_id: String, frame: String) -> Result<S
 // Steps
 // ---------------------------------------------------------------------------
 
+#[tauri::command]
+pub fn preview_markdown(text: String) -> String {
+    crate::guide_markdown::render(&limits::clamp(&text, limits::STEP_BODY))
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportedStep {
@@ -522,37 +528,116 @@ pub async fn import_step(
             .into_path()
             .map_err(|_| AppError::Invalid("Choose a local screenshot file.".into()))?;
         let image = imaging::load_screenshot(&path)?;
-        let png = imaging::encode_png(&image)?;
+        insert_step_image(&app, &project_id, after_step_id.as_deref(), image).map(Some)
+    })
+    .await
+    .map_err(|error| AppError::Other(error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn capture_step(
+    app: AppHandle,
+    project_id: String,
+    after_step_id: Option<String>,
+    source_id: String,
+) -> Result<ImportedStep> {
+    tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<AppState>();
         if state.session.lock().is_some() {
             return Err(AppError::AlreadyRecording);
         }
-        let mut guard = state.project.lock();
-        let project = guard
-            .as_mut()
-            .filter(|project| project.id == project_id)
-            .ok_or_else(|| AppError::NotFound("That guide is no longer open.".into()))?;
-        let frame = format!("manual-{}.png", uuid::Uuid::new_v4().simple());
-        let frame_path = storage::frame_path(&app, &project_id, &frame)?;
-        let mut updated = project.clone();
-        let step_id = updated.insert_manual_step(frame, after_step_id.as_deref());
-        updated.touch();
-        if let Err(error) = std::fs::write(&frame_path, png) {
-            let _ = std::fs::remove_file(&frame_path);
-            return Err(error.into());
+        if !capture::has_permission() {
+            return Err(AppError::PermissionDenied);
         }
-        if let Err(error) = storage::save_project(&app, &updated) {
-            let _ = std::fs::remove_file(&frame_path);
-            return Err(error);
+        if !state
+            .project
+            .lock()
+            .as_ref()
+            .is_some_and(|project| project.id == project_id)
+        {
+            return Err(AppError::NotFound("That guide is no longer open.".into()));
         }
-        *project = updated;
-        Ok(Some(ImportedStep {
-            project: project.clone(),
-            step_id,
-        }))
+        let target = capture::resolve(&source_id)?;
+        let (countdown, max_width) = {
+            let settings = state.settings.lock();
+            (
+                settings.capture.countdown_secs.clamp(1, 10),
+                settings.capture.max_width,
+            )
+        };
+        let main = app
+            .get_webview_window(window::MAIN)
+            .ok_or_else(|| AppError::NotFound("The Walkmark window is not open.".into()))?;
+        main.hide()
+            .map_err(|error| AppError::Other(error.to_string()))?;
+        std::thread::sleep(std::time::Duration::from_secs(u64::from(countdown)));
+        let screenshot = target.grab();
+        let _ = main.show();
+        let _ = main.set_focus();
+
+        let image = capture::downscale(screenshot?, max_width);
+        insert_step_image(&app, &project_id, after_step_id.as_deref(), image)
     })
     .await
     .map_err(|error| AppError::Other(error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn paste_step(
+    app: AppHandle,
+    project_id: String,
+    after_step_id: Option<String>,
+) -> Result<ImportedStep> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clipboard = app.clipboard().read_image().map_err(|_| {
+            AppError::Invalid("Copy a screenshot or image to the clipboard first.".into())
+        })?;
+        let image = image::RgbaImage::from_raw(
+            clipboard.width(),
+            clipboard.height(),
+            clipboard.rgba().to_vec(),
+        )
+        .ok_or_else(|| AppError::Invalid("The clipboard image could not be read.".into()))?;
+        insert_step_image(&app, &project_id, after_step_id.as_deref(), image)
+    })
+    .await
+    .map_err(|error| AppError::Other(error.to_string()))?
+}
+
+fn insert_step_image(
+    app: &AppHandle,
+    project_id: &str,
+    after_step_id: Option<&str>,
+    image: image::RgbaImage,
+) -> Result<ImportedStep> {
+    let png = imaging::encode_png(&image)?;
+    let state = app.state::<AppState>();
+    if state.session.lock().is_some() {
+        return Err(AppError::AlreadyRecording);
+    }
+    let mut guard = state.project.lock();
+    let project = guard
+        .as_mut()
+        .filter(|project| project.id == project_id)
+        .ok_or_else(|| AppError::NotFound("That guide is no longer open.".into()))?;
+    let frame = format!("manual-{}.png", uuid::Uuid::new_v4().simple());
+    let frame_path = storage::frame_path(app, project_id, &frame)?;
+    let mut updated = project.clone();
+    let step_id = updated.insert_manual_step(frame, after_step_id);
+    updated.touch();
+    if let Err(error) = std::fs::write(&frame_path, png) {
+        let _ = std::fs::remove_file(&frame_path);
+        return Err(error.into());
+    }
+    if let Err(error) = storage::save_project(app, &updated) {
+        let _ = std::fs::remove_file(&frame_path);
+        return Err(error);
+    }
+    *project = updated;
+    Ok(ImportedStep {
+        project: project.clone(),
+        step_id,
+    })
 }
 
 fn deserialize_crop_patch<'de, D: serde::Deserializer<'de>>(

@@ -6,6 +6,7 @@
 	import DocumentHeader from './DocumentHeader.svelte';
 	import StepCard from './StepCard.svelte';
 	import StepRail from './StepRail.svelte';
+	import AddStepMenu from './AddStepMenu.svelte';
 
 	const project = $derived(store.project);
 	const focused = $derived(store.focused);
@@ -68,9 +69,7 @@
 								</p>
 							</div>
 							<div class="flex flex-wrap justify-center gap-2">
-								<Button disabled={store.stepImportPending} onclick={() => void store.importStep()}>
-									Add step
-								</Button>
+								<AddStepMenu variant="default" />
 								<Button variant="ghost" onclick={() => store.setDialog('sources')}>Record steps</Button>
 							</div>
 						</div>

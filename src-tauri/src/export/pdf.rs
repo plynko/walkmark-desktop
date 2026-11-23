@@ -1,6 +1,7 @@
 use printpdf::*;
 
 use crate::error::{AppError, Result};
+use crate::guide_markdown::plain_text as strip_markdown;
 use crate::models::Project;
 
 use super::{ExportOptions, RenderedStep};
@@ -96,7 +97,7 @@ pub fn render(
     if options.include_summary && !project.summary.trim().is_empty() {
         writer.gap(14.0);
         writer.text(
-            project.summary.trim(),
+            &strip_markdown(&project.summary),
             &Style {
                 size: 11.0,
                 bold: false,
@@ -601,47 +602,6 @@ fn wrap(
         lines.push(String::new());
     }
     lines
-}
-
-/// The PDF writer lays out plain text, so inline markdown emphasis from the
-/// model is flattened rather than printed as literal asterisks.
-fn strip_markdown(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut chars = text.chars().peekable();
-    let mut at_line_start = true;
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '*' | '_' => {
-                // A bullet marker only counts at the very start of a line.
-                if at_line_start && ch == '*' && chars.peek() == Some(&' ') {
-                    out.push('•');
-                    at_line_start = false;
-                } else if chars.peek() == Some(&ch) {
-                    chars.next();
-                }
-            }
-            '`' => {}
-            '#' if at_line_start => {
-                while chars.peek() == Some(&'#') {
-                    chars.next();
-                }
-                if chars.peek() == Some(&' ') {
-                    chars.next();
-                }
-            }
-            '\n' => {
-                out.push('\n');
-                at_line_start = true;
-                continue;
-            }
-            other => {
-                out.push(other);
-                at_line_start = false;
-            }
-        }
-    }
-    out
 }
 
 #[cfg(test)]

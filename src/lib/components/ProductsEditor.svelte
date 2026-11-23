@@ -119,7 +119,7 @@
 							product.id
 								? 'bg-(--text) text-(--bg)'
 								: 'bg-(--text)/5 text-(--text)/40 hover:bg-(--text)/10'}"
-							aria-label="Select {product.name}"
+							aria-label="Select {product.name}" data-tooltip=""
 							onclick={() => selectProduct(product.id)}
 						>
 							<Icon icon="lucide:check" class="size-3.5" />
@@ -138,7 +138,7 @@
 						<button
 							type="button"
 							class="grid size-8 shrink-0 place-items-center rounded-xl text-(--text)/40 hover:bg-(--text)/5 hover:text-red-500"
-							aria-label="Remove {product.name}"
+							aria-label="Remove {product.name}" data-tooltip=""
 							onclick={() => removeProduct(product.id)}
 						>
 							<Icon icon="lucide:trash-2" class="size-3.5" />

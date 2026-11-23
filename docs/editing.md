@@ -26,9 +26,13 @@ Each step card has:
 
 Click any title or instruction field to edit by hand. Changes save automatically.
 
+The guide summary and step descriptions grow as you type. They accept Markdown such as `**bold**`, `*italics*`, lists, links and code. Use **Preview Markdown** to see the result and **Edit Markdown** to continue writing. HTML uses the formatted text, Markdown export keeps the source, and PDF shows the readable text and list markers.
+
 ### Add a screenshot to an existing guide
 
-Click **Add step** in the step rail and choose a PNG or JPEG. Walkmark saves a copy in the guide and inserts the step after your selection, or at the end if nothing is selected. Write the instructions by hand or use **Write** to draft them.
+Click **Add step** in the step rail. Choose **Capture screenshot** to pick a screen or window and take one screenshot after a countdown. Use **Import image** for a PNG or JPEG, or **Paste from clipboard** for a copied image.
+
+Walkmark saves a copy in the guide and inserts the step after your selection, or at the end if nothing is selected. Write the instructions by hand or use **Write** to draft them.
 
 ### Locked steps
 
@@ -99,7 +103,7 @@ Highlight and Cover support colour and stroke options in the toolbar.
 
 ## Pick a different moment
 
-If a step fired too early or late, and **alternate** frames exist from the same recording, click **Different moment** on the screenshot. Pick the frame that best shows the step.
+If a step fired too early or late, click **Choose another frame** on the screenshot when available. Pick one of the nearby frames from the same recording. The step text stays in place.
 
 Alternates are captured automatically when Walkmark samples near the same timestamp — you do not manage them manually during recording.
 

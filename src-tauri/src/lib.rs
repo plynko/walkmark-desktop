@@ -3,6 +3,7 @@ mod capture;
 mod commands;
 mod error;
 mod export;
+mod guide_markdown;
 mod imaging;
 pub mod local;
 mod limits;
@@ -182,7 +183,10 @@ pub fn run() {
             commands::delete_project,
             commands::update_project_meta,
             commands::frame_path,
+            commands::preview_markdown,
             commands::import_step,
+            commands::capture_step,
+            commands::paste_step,
             commands::update_step,
             commands::reorder_steps,
             commands::delete_steps,
