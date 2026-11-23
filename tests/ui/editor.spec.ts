@@ -254,4 +254,18 @@ test.describe("export", () => {
     await app.page.getByRole("button", { name: "Export", exact: true }).click();
     await expect(app.page.getByText("Include date, version and author")).toBeVisible();
   });
+
+  test("can export as a Word document", async ({ app }) => {
+    await app.openGuide();
+    await app.page.getByRole("button", { name: "Export", exact: true }).click();
+    const word = app.page.getByRole("button", { name: /^Word/ });
+    await word.click();
+    await expect(word).toHaveAttribute("aria-pressed", "true");
+    await expect(app.page.getByText(/editable \.docx/)).toBeVisible();
+    // The colour scheme only applies to the web page format.
+    await expect(app.page.getByText("Colour scheme")).toHaveCount(0);
+
+    await app.page.getByRole("button", { name: "Choose location…" }).click();
+    await expect.poll(async () => (await app.calls("suggest_export_name")).map((c) => c.args.format)).toEqual(["docx"]);
+  });
 });

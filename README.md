@@ -10,7 +10,7 @@
 
 Turn a workflow you do once into step-by-step documentation someone else can follow.
 
-Walkmark is a native desktop app. You pick a screen or window, do the task, and it captures each meaningful step with a screenshot. When you are ready, an AI model writes the instructions. Export as Markdown, a single HTML file, or PDF.
+Walkmark is a native desktop app. You pick a screen or window, do the task, and it captures each meaningful step with a screenshot. When you are ready, an AI model writes the instructions. Export as Markdown, a single HTML file, Word, or PDF.
 
 <p align="center">
   <img src="docs/screenshots/readme-editor.png" alt="Walkmark document editor with AI-written steps and export" width="900" />
@@ -52,7 +52,7 @@ The open source app is fully usable without Cloud: projects and screenshots stay
 1. **Record** — Walkmark samples the screen, detects meaningful changes, and saves a frame per step. You can mark moments by hand.
 2. **Review** — Reorder, merge, blur sensitive areas, swap frames, edit titles.
 3. **Write** — Your chosen model turns screenshots into instructions. Steps you edited yourself are left alone. [How AI writing works →](docs/ai-writing.md)
-4. **Export** — Markdown (+ images folder), self-contained HTML, or print-ready PDF.
+4. **Export** — Markdown (+ images folder), self-contained HTML, editable Word, or print-ready PDF.
 
 ## Privacy
 

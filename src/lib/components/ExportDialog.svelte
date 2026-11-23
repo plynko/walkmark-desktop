@@ -53,6 +53,13 @@
 			blurb:
 				'One self-contained file with the images embedded. Email it, host it, open it offline — it just works.'
 		},
+		docx: {
+			label: 'Word',
+			icon: 'lucide:pen-line',
+			extension: 'docx',
+			blurb:
+				'An editable .docx with real headings and lists, and the screenshots embedded. Open it in Word, Pages or Google Docs.'
+		},
 		pdf: {
 			label: 'PDF',
 			icon: 'lucide:file-type-2',
@@ -171,7 +178,7 @@
 					</div>
 				{/if}
 
-				<div class="grid gap-2 sm:grid-cols-3">
+				<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
 					{#each Object.keys(FORMATS) as key (key)}
 						{@const entry = FORMATS[key as ExportFormat]}
 						{@const active = options.format === key}

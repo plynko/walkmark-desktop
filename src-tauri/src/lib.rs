@@ -23,7 +23,9 @@ pub mod probe {
 
     pub use crate::capture::detect::threshold_for;
     pub use crate::capture::{has_permission, list_sources};
-    pub use crate::export::{html, markdown, pdf, ExportOptions, RenderedImage, RenderedStep};
+    pub use crate::export::{
+        docx, html, markdown, pdf, ExportOptions, RenderedImage, RenderedStep,
+    };
     pub use crate::imaging::{apply_annotations, encode_jpeg, encode_png, fit_width, load};
     pub use crate::models::{ExportFormat, Project, Provider};
 

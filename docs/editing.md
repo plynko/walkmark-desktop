@@ -29,7 +29,7 @@ Each step card has:
 
 Click any title or instruction field to edit by hand. Changes save automatically.
 
-The guide summary and step descriptions grow as you type. They accept Markdown such as `**bold**`, `*italics*`, lists, links and code. Use **Preview Markdown** to see the result and **Edit Markdown** to continue writing. HTML uses the formatted text, Markdown export keeps the source, and PDF shows the readable text and list markers.
+The guide summary and step descriptions grow as you type. They accept Markdown such as `**bold**`, `*italics*`, lists, links and code. Use **Preview Markdown** to see the result and **Edit Markdown** to continue writing. HTML and Word use the formatted text, Markdown export keeps the source, and PDF shows the readable text and list markers.
 
 ### Add a screenshot to an existing guide
 
@@ -119,7 +119,7 @@ Alternates are captured automatically when Walkmark samples near the same timest
 | **Model picker** | Provider + model for this document |
 | **Write N steps** | Generate text for steps that are empty |
 | **Rewrite** | Regenerate all unlocked steps |
-| **Export** | Markdown, HTML, or PDF |
+| **Export** | Markdown, HTML, Word, or PDF |
 
 ## Product vocabulary
 

@@ -12,7 +12,7 @@ Guides for the open source desktop app. The same docs are published at [walkmark
 | [Settings](settings.md) | Models, writing voice, recording prefs, appearance |
 | [AI writing](ai-writing.md) | Two-pass writing, providers, models, vocabulary |
 | [Local models](local-models.md) | Ollama, LM Studio, compatible endpoints |
-| [Export](export.md) | Markdown, HTML, PDF, copy to clipboard |
+| [Export](export.md) | Markdown, HTML, Word, PDF, copy to clipboard |
 | [Keyboard shortcuts](keyboard-shortcuts.md) | In-app, global recording, image editor |
 | [Troubleshooting](troubleshooting.md) | Permissions, API keys, capture, export errors |
 | [Privacy and data](privacy.md) | What stays local, when cloud is used |

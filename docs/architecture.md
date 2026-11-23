@@ -5,13 +5,13 @@ Walkmark is a **Tauri 2** desktop app: a **Svelte 5** frontend and a **Rust** ba
 ## High-level flow
 
 ```
-Record → frames on disk → edit in UI → Write (AI) → export Markdown/HTML/PDF
+Record → frames on disk → edit in UI → Write (AI) → export Markdown/HTML/Word/PDF
 ```
 
 1. **Capture** samples a monitor or window, detects meaningful changes, saves PNG frames.
 2. **Storage** persists projects as `project.json` + `frames/*.png` under app data.
 3. **AI** runs a two-pass write: outline all frames, then per-step bodies (see [AI writing](ai-writing.md)).
-4. **Export** renders included steps to Markdown (+ images folder), self-contained HTML, or PDF.
+4. **Export** renders included steps to Markdown (+ images folder), self-contained HTML, Word, or PDF.
 
 ## Repository layout
 
@@ -27,7 +27,7 @@ src-tauri/src/
   capture/                Source listing, session, input monitoring, detect
   ai/                     Prompts, generation orchestration, model catalog
   ai/provider/            HTTP clients per provider (gemini, openai, …)
-  export/                 markdown.rs, html.rs, pdf.rs
+  export/                 markdown.rs, html.rs, docx.rs, pdf.rs
   imaging.rs              Resize, encode, burn annotations into frames
   storage.rs              settings.json, projects, API key files
   local.rs                Ollama status, model pull/remove
@@ -83,7 +83,8 @@ Prompts live in `ai/prompt.rs`. Provider-specific HTTP in `ai/provider/*.rs`.
 1. Load project + included steps with rendered frames (annotations applied in `imaging.rs`).
 2. **Markdown** — `.md` + `images/` directory beside it.
 3. **HTML** — single file, base64 images, inlined CSS.
-4. **PDF** — `printpdf` layout, A4, page numbers.
+4. **Word** — `docx-rs`, A4. Headings, lists and runs are real Word objects (the guide's Markdown is converted in `docx.rs`); screenshots are the same flattened PNGs the other formats embed.
+5. **PDF** — `printpdf` layout, A4, page numbers.
 
 ## Security
 

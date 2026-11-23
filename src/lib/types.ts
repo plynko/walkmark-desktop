@@ -202,7 +202,7 @@ export interface GenerationProgress {
   message?: string;
 }
 
-export type ExportFormat = "markdown" | "html" | "pdf";
+export type ExportFormat = "markdown" | "html" | "pdf" | "docx";
 
 export interface ExportOptions {
   format: ExportFormat;

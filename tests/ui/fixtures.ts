@@ -159,6 +159,8 @@ function installTauriMock(language: string) {
         return structuredClone(state.project);
       case "frame_path":
         return args.frame;
+      case "suggest_export_name":
+        return `sample-guide.${args.format === "docx" ? "docx" : args.format}`;
       case "list_sources":
         return [
           {

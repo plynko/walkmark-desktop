@@ -1,6 +1,6 @@
 use pulldown_cmark::{html, Event, Options, Parser, Tag, TagEnd};
 
-fn events(input: &str) -> Parser<'_> {
+pub(crate) fn events(input: &str) -> Parser<'_> {
     Parser::new_ext(
         input,
         Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES,

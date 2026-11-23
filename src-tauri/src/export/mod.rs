@@ -1,3 +1,4 @@
+pub mod docx;
 pub mod html;
 pub mod markdown;
 pub mod pdf;
@@ -200,6 +201,10 @@ pub fn write(
         ExportFormat::Markdown => Some(markdown::write(project, &steps, options, destination)?),
         ExportFormat::Html => {
             std::fs::write(destination, html::render(project, &steps, options))?;
+            None
+        }
+        ExportFormat::Docx => {
+            std::fs::write(destination, docx::render(project, &steps, options)?)?;
             None
         }
         ExportFormat::Pdf => {

@@ -1,4 +1,4 @@
-//! Renders a stored project to all three formats so the output can be eyeballed
+//! Renders a stored project to every export format so the output can be eyeballed
 //! without driving the UI.
 //!
 //! `cargo run --release --example probe_export -- <project-id> [out-dir]`
@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 
 use walkmark_lib::probe::{
-    apply_annotations, encode_png, fit_width, html, load, markdown, pdf, ExportFormat,
+    apply_annotations, docx, encode_png, fit_width, html, load, markdown, pdf, ExportFormat,
     ExportOptions, Project, RenderedImage, RenderedStep,
 };
 
@@ -60,6 +60,7 @@ fn main() {
         ExportFormat::Markdown,
         ExportFormat::Html,
         ExportFormat::Pdf,
+        ExportFormat::Docx,
     ] {
         let path = out.join(format!("guide.{}", format.extension()));
         let bytes = match format {
@@ -77,6 +78,11 @@ fn main() {
             ExportFormat::Pdf => {
                 let doc = pdf::render(&project, &steps, &options).expect("render pdf");
                 std::fs::write(&path, &doc).expect("write pdf");
+                doc.len() as u64
+            }
+            ExportFormat::Docx => {
+                let doc = docx::render(&project, &steps, &options).expect("render docx");
+                std::fs::write(&path, &doc).expect("write docx");
                 doc.len() as u64
             }
         };

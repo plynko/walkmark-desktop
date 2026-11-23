@@ -11,7 +11,7 @@ These never require the network:
 | Screen and window recording | `projects/<id>/frames/*.png` |
 | Project metadata and edits | `projects/<id>/project.json` |
 | Reorder, merge, exclude, annotations | Same project folder |
-| Export to Markdown / HTML / PDF | Path you choose at save time |
+| Export to Markdown / HTML / Word / PDF | Path you choose at save time |
 | App preferences | `settings.json` in app data |
 | API keys (BYOK) | `credentials.<provider>` + OS secret store |
 

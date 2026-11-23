@@ -16,6 +16,12 @@ One **self-contained** `.html` file with images embedded as base64. No external 
 
 Best for: sharing with someone who does not have Walkmark, internal wikis that accept HTML upload, quick review in a browser.
 
+### Word (.docx)
+
+An editable **A4** document. Titles are real headings, lists are real lists, bold, italics, code and links keep their formatting, and each screenshot is embedded with its annotations and crop already applied. The footer carries page numbers. It opens in Word, Pages, Google Docs and LibreOffice, and the headings show up in Word's navigation pane.
+
+Best for: handing a guide to someone who will rework the wording, style it with a company template, or sign it off in Word.
+
 ### PDF
 
 Print-ready **A4** document with page numbers. Steps avoid awkward page breaks where possible.
@@ -28,7 +34,7 @@ Best for: handbooks, compliance packets, printed runbooks, sign-off documents.
 | --- | --- | --- |
 | **Include images** | On | Markdown (always embedded in HTML/PDF) |
 | **Image width** | Standard (1400 px) | Compact 900 / Standard 1400 / Large 1920 |
-| **Table of contents** | On | HTML (when more than two steps) |
+| **Table of contents** | On | Markdown, HTML and Word (when more than two steps) |
 | **Summary** | On | All formats |
 | **Prerequisites** | On | All formats |
 | **Date, version and author** | On | All formats — a line under the title |
@@ -57,7 +63,7 @@ Steps without body text still export if included — placeholders may appear. Th
 ## Workflow tips
 
 - Run **Write** before export for polished prose, or export skeleton + screenshots for manual editing elsewhere.
-- Use **HTML** for one-file sharing; **Markdown** when you need editable source in Git.
+- Use **HTML** for one-file sharing; **Markdown** when you need editable source in Git; **Word** when others will edit the text.
 - Use **Compact** image width for Slack or narrow wiki columns; **Large** for print-like HTML.
 - Redact in the image editor first — exports reflect annotations, not raw frames.
 

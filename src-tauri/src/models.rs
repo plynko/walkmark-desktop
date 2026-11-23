@@ -1112,6 +1112,7 @@ pub enum ExportFormat {
     Markdown,
     Html,
     Pdf,
+    Docx,
 }
 
 impl ExportFormat {
@@ -1120,6 +1121,7 @@ impl ExportFormat {
             ExportFormat::Markdown => "md",
             ExportFormat::Html => "html",
             ExportFormat::Pdf => "pdf",
+            ExportFormat::Docx => "docx",
         }
     }
 }

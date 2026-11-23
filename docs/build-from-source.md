@@ -95,7 +95,7 @@ src-tauri/src/
   commands.rs             IPC command handlers
   capture/                Recording session, input, detection
   ai/                     Prompts, generation, catalog
-  export/                 Markdown, HTML, PDF
+  export/                 Markdown, HTML, Word, PDF
   storage.rs              Projects, settings, credentials
 docs/                     User and developer documentation
 ```

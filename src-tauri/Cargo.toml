@@ -44,6 +44,7 @@ parking_lot = "0.12"
 keyring = "4"
 dirs = "6"
 pulldown-cmark = "0.13"
+docx-rs = "0.4.22"
 
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 rdev = { git = "https://github.com/Narsil/rdev.git", rev = "c77b4e5456301cfa7f2226020f2a58f2f8d77c5d" }
@@ -67,6 +68,9 @@ strip = true
 # GHSA-wrw7-89jp-8q8g. Upstream only fixed glib >= 0.20; gtk3-rs is archived.
 # Patch gtk-rs-core 0.18 with the VariantStrIter backport until Tauri moves to gtk4.
 # See: https://rustsec.org/advisories/RUSTSEC-2024-0429
+[dev-dependencies]
+zip = { version = "8", default-features = false, features = ["deflate"] }
+
 [patch.crates-io]
 glib = { git = "https://github.com/shiva-manu/gtk-rs-core.git", branch = "0.18-patched" }
 glib-sys = { git = "https://github.com/shiva-manu/gtk-rs-core.git", branch = "0.18-patched" }

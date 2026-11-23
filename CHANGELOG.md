@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4 — unreleased
+
+- Export as Word (.docx): real headings and lists, formatted text, screenshots with annotations and crop applied, translated fixed wording, details line and page numbers.
+- Rust code formatted with `cargo fmt`.
+
 ## 0.2.3 — 2026-11-23
 
 - Stop writing now interrupts requests that are already running, including the overview pass, and returns unfinished steps to how they were.
