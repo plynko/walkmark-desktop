@@ -117,33 +117,15 @@ test.describe("document details", () => {
   const meta = async (app: { calls(cmd?: string): Promise<{ args: Record<string, unknown> }[]> }) =>
     (await app.calls("update_project_meta")).map((call) => call.args.meta);
 
-  test("shows the wording exports use until it is changed", async ({ app }) => {
+  test("shows the fixed wording as plain text, not as fields", async ({ app }) => {
     await app.openGuide();
     const page = app.page;
-    await expect(page.getByRole("textbox", { name: "Guide label" })).toHaveAttribute("placeholder", "Step-by-step guide");
-    await expect(page.getByRole("textbox", { name: "Prerequisites heading" })).toHaveAttribute("placeholder", "Before you start");
+    await expect(page.getByText("Step-by-step guide", { exact: true })).toBeVisible();
+    await expect(page.getByText("Before you start", { exact: true })).toBeVisible();
+    await expect(page.getByText("Exported", { exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Guide label" })).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: "Version", exact: true })).toHaveValue("1.0");
     await expect(page.getByRole("textbox", { name: "Author", exact: true })).toHaveValue("");
-  });
-
-  test("the “Before you start” heading is editable", async ({ app }) => {
-    await app.openGuide();
-    const heading = app.page.getByRole("textbox", { name: "Prerequisites heading" });
-    await heading.fill("Prima di iniziare");
-    await heading.press("Enter");
-    await expect.poll(() => meta(app)).toEqual([
-      { labels: { guide: "", prerequisites: "Prima di iniziare", exported: "", version: "", author: "" } },
-    ]);
-  });
-
-  test("the guide label above the title is editable", async ({ app }) => {
-    await app.openGuide();
-    const label = app.page.getByRole("textbox", { name: "Guide label" });
-    await label.fill("Guida passo passo");
-    await label.press("Enter");
-    await expect.poll(async () => (await meta(app))[0]).toMatchObject({
-      labels: { guide: "Guida passo passo" },
-    });
   });
 
   test("version and author are saved", async ({ app }) => {
@@ -165,15 +147,87 @@ test.describe("document details", () => {
     expect(await meta(app)).toEqual([]);
   });
 
-  test("translating fills every label from the AI", async ({ app }) => {
-    await app.openGuide();
-    await app.page.getByRole("button", { name: "Translate labels" }).click();
-    await expect(app.page.getByRole("textbox", { name: "Guide label" })).toHaveValue("Guida passo passo");
-    await expect(app.page.getByRole("textbox", { name: "Prerequisites heading" })).toHaveValue("Prima di iniziare");
-    await expect(app.page.getByRole("textbox", { name: "Export date label" })).toHaveValue("Esportato il");
-    await expect(app.page.getByRole("textbox", { name: "Version label" })).toHaveValue("Versione");
-    await expect(app.page.getByRole("textbox", { name: "Author label" })).toHaveValue("Autore");
-    expect(await app.calls("translate_labels")).toHaveLength(1);
+  test.describe("in Italian", () => {
+    test.use({ language: "Italian" });
+
+    test("uses the Italian wording from Settings", async ({ app }) => {
+      await app.openGuide();
+      await expect(app.page.getByText("Guida passo passo", { exact: true })).toBeVisible();
+      await expect(app.page.getByText("Prima di iniziare", { exact: true })).toBeVisible();
+      await expect(app.page.getByText("Esportato il", { exact: true })).toBeVisible();
+      await expect(app.page.getByText("Versione", { exact: true })).toBeVisible();
+    });
+  });
+});
+
+test.describe("wording in Settings", () => {
+  const openWriting = async (page: import("@playwright/test").Page) => {
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("tab", { name: "Writing" }).click();
+  };
+
+  test("shows the built-in wording and lets you change one word", async ({ app }) => {
+    await openWriting(app.page);
+    const heading = app.page.getByRole("textbox", { name: "Prerequisites heading in English" });
+    await expect(heading).toHaveValue("Before you start");
+    await heading.fill("Requirements");
+    await heading.press("Enter");
+
+    const [save] = (await app.calls("save_settings")).slice(-1);
+    expect((save.args.settings as any).labels).toEqual({
+      English: { guide: "", prerequisites: "Requirements", exported: "", version: "", author: "" },
+    });
+    await expect(app.page.getByRole("button", { name: "Back to the built-in wording" })).toBeVisible();
+  });
+
+  test("an edit that matches the built-in wording is not stored", async ({ app }) => {
+    await openWriting(app.page);
+    const heading = app.page.getByRole("textbox", { name: "Prerequisites heading in English" });
+    await heading.fill("Before you start ");
+    await heading.press("Enter");
+    expect(await app.calls("save_settings")).toHaveLength(0);
+  });
+
+  test("going back to the built-in wording clears the changes", async ({ app }) => {
+    await openWriting(app.page);
+    const heading = app.page.getByRole("textbox", { name: "Prerequisites heading in English" });
+    await heading.fill("Requirements");
+    await heading.press("Enter");
+    await app.page.getByRole("button", { name: "Back to the built-in wording" }).click();
+    await expect(heading).toHaveValue("Before you start");
+    const [save] = (await app.calls("save_settings")).slice(-1);
+    expect((save.args.settings as any).labels).toEqual({});
+  });
+
+  test("a built-in language has no Translate button", async ({ app }) => {
+    await openWriting(app.page);
+    await expect(app.page.getByRole("button", { name: "Translate with AI" })).toHaveCount(0);
+  });
+
+  test.describe("for a language without built-in wording", () => {
+    test.use({ language: "Lithuanian" });
+
+    test("offers Translate with AI and stores the result for that language", async ({ app }) => {
+      await openWriting(app.page);
+      await expect(app.page.getByText(/no built-in Lithuanian wording/)).toBeVisible();
+      await app.page.getByRole("button", { name: "Translate with AI" }).click();
+
+      await expect(app.page.getByRole("textbox", { name: "Prerequisites heading in Lithuanian" })).toHaveValue(
+        "Prima di iniziare",
+      );
+      expect(await app.calls("translate_labels")).toHaveLength(1);
+      const [save] = (await app.calls("save_settings")).slice(-1);
+      expect((save.args.settings as any).labels.Lithuanian.prerequisites).toBe("Prima di iniziare");
+    });
+
+    test("accepts wording typed by hand", async ({ app }) => {
+      await openWriting(app.page);
+      const author = app.page.getByRole("textbox", { name: "Author in Lithuanian" });
+      await author.fill("Autorius");
+      await author.press("Enter");
+      const [save] = (await app.calls("save_settings")).slice(-1);
+      expect((save.args.settings as any).labels.Lithuanian.author).toBe("Autorius");
+    });
   });
 });
 

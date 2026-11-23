@@ -12,11 +12,10 @@ At the top of the document:
 | --- | --- |
 | **Title** | Guide name (library card and exports) |
 | **Summary** | Short overview for readers |
-| **Guide label** | Small heading above the title. Defaults to “Step-by-step guide” |
-| **Export date, Version, Author** | A line under the title. The date is filled in on the day you export; version (default 1.0) and author are yours to edit |
-| **Before you start** | Prerequisites — only shown when filled. The heading itself is editable |
+| **Version, Author** | A line under the title, next to the export date. The date is filled in on the day you export; version (default 1.0) and author are yours to edit |
+| **Before you start** | Prerequisites — only shown when filled |
 
-The wording of the guide label, the heading above the prerequisites and the words “Exported”, “Version” and “Author” can all be edited. Leave one empty to use the English default. For a guide in another language, select **Translate labels** to have the AI translate all of them into the guide's language, then adjust anything you like.
+The words around your text — the small heading above the title, “Before you start”, “Exported”, “Version” and “Author” — are the same for every guide in a language. They follow the guide's language and are set in **Settings → Writing → Wording in exports**.
 
 AI fills these on write; edit them anytime.
 

@@ -17,13 +17,14 @@ export interface App {
  * exercise the real Svelte UI in a plain browser. Native behaviour — screen
  * capture, the clipboard and macOS permissions — is not covered here.
  */
-function installTauriMock() {
+function installTauriMock(language: string) {
   const settings = {
     provider: "gemini",
     providers: {},
     audience: "a colleague",
     tone: "neutral",
-    language: "English",
+    language,
+    labels: {} as Record<string, Record<string, string>>,
     concurrency: 3,
     capture: {
       sampleIntervalMs: 600,
@@ -93,11 +94,10 @@ function installTauriMock() {
       prerequisites: ["An admin account"],
       version: "1.0",
       author: "",
-      labels: { guide: "", prerequisites: "", exported: "", version: "", author: "" },
-      createdAt: "2026-01-01T00:00:00Z",
+          createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-01T00:00:00Z",
       sourceLabel: "Window",
-      language: "English",
+      language,
       steps: [
         { ...makeStep("s1", "Open the menu", "frame-b.png", ["frame-a.png"]), body: "Click **File**." },
         makeStep("s2", "Save the file", "frame-c.png"),
@@ -139,8 +139,10 @@ function installTauriMock() {
       case "plugin:event|unlisten":
         return null;
       case "get_settings":
+        return settings;
       case "save_settings":
-        return args.settings ?? settings;
+        Object.assign(settings, args.settings);
+        return settings;
       case "permission_status":
         return { granted: true, required: false };
       case "provider_catalog":
@@ -170,6 +172,28 @@ function installTauriMock() {
             thumbnail: null,
           },
         ];
+      case "document_labels": {
+        const english = {
+          guide: "Step-by-step guide",
+          prerequisites: "Before you start",
+          exported: "Exported",
+          version: "Version",
+          author: "Author",
+        };
+        const italian = {
+          guide: "Guida passo passo",
+          prerequisites: "Prima di iniziare",
+          exported: "Esportato il",
+          version: "Versione",
+          author: "Autore",
+        };
+        const name = String(args.language).trim().toLowerCase();
+        const defaults = name === "italian" ? italian : english;
+        const custom = Object.entries(settings.labels).find(([k]) => k.toLowerCase() === name)?.[1];
+        const labels: Record<string, string> = { ...defaults };
+        for (const [key, value] of Object.entries(custom ?? {})) if (value) labels[key] = value;
+        return { labels, defaults, localized: name === "english" || name === "italian", customized: !!custom };
+      }
       case "update_project_meta":
         Object.assign(state.project, args.meta);
         return structuredClone(state.project);
@@ -224,12 +248,14 @@ function installTauriMock() {
   };
 }
 
-export const test = base.extend<{ app: App }>({
-  app: async ({ page }, use) => {
+export const test = base.extend<{ app: App; language: string }>({
+  /** Writing language in Settings; picks which fixed wording the editor shows. */
+  language: ["English", { option: true }],
+  app: async ({ page, language }, use) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(String(error)));
 
-    await page.addInitScript(installTauriMock);
+    await page.addInitScript(installTauriMock, language);
     // Match the desktop app: external origins (icon APIs, fonts) are unavailable.
     await page.route("**/*", (route) =>
       new URL(route.request().url()).origin === "http://localhost:1420"

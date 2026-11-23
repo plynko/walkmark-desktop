@@ -318,9 +318,9 @@ fn default_document_version() -> String {
     "1.0".into()
 }
 
-/// Fixed wording that exports print around the guide's own text. Each one is
-/// editable so a guide can be written in any language; an empty value falls
-/// back to the English default.
+/// Fixed wording that exports print around the guide's own text. They belong
+/// to a language, not to a guide, and live in Settings. An empty value falls
+/// back to the language's built-in wording, then to English.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct DocumentLabels {
@@ -349,6 +349,65 @@ impl DocumentLabels {
             default
         } else {
             value
+        }
+    }
+
+    /// The English wording, written out in full.
+    pub fn english() -> Self {
+        Self {
+            guide: Self::GUIDE.into(),
+            prerequisites: Self::PREREQUISITES.into(),
+            exported: Self::EXPORTED.into(),
+            version: Self::VERSION.into(),
+            author: Self::AUTHOR.into(),
+        }
+    }
+
+    /// Wording that ships with Walkmark. Languages not listed here are
+    /// translated by the user, or by the AI on request.
+    pub fn built_in(language: &str) -> Option<Self> {
+        let words = |guide: &str, prerequisites: &str, exported: &str, version: &str, author: &str| {
+            Some(Self {
+                guide: guide.into(),
+                prerequisites: prerequisites.into(),
+                exported: exported.into(),
+                version: version.into(),
+                author: author.into(),
+            })
+        };
+        match language.trim().to_lowercase().as_str() {
+            "english" => Some(Self::english()),
+            "italian" => words("Guida passo passo", "Prima di iniziare", "Esportato il", "Versione", "Autore"),
+            "spanish" => words("Guía paso a paso", "Antes de empezar", "Exportado el", "Versión", "Autor"),
+            "french" => words("Guide pas à pas", "Avant de commencer", "Exporté le", "Version", "Auteur"),
+            "german" => words("Schritt-für-Schritt-Anleitung", "Bevor Sie beginnen", "Exportiert am", "Version", "Autor"),
+            "portuguese" => words("Guia passo a passo", "Antes de começar", "Exportado em", "Versão", "Autor"),
+            "dutch" => words("Stapsgewijze handleiding", "Voordat je begint", "Geëxporteerd op", "Versie", "Auteur"),
+            _ => None,
+        }
+    }
+
+    fn is_blank(&self) -> bool {
+        [&self.guide, &self.prerequisites, &self.exported, &self.version, &self.author]
+            .iter()
+            .all(|text| text.trim().is_empty())
+    }
+
+    /// `self` where it says something, `base` where it does not.
+    fn over(&self, base: &Self) -> Self {
+        let field = |mine: &str, theirs: &str| {
+            if mine.trim().is_empty() {
+                theirs.to_owned()
+            } else {
+                mine.trim().to_owned()
+            }
+        };
+        Self {
+            guide: field(&self.guide, &base.guide),
+            prerequisites: field(&self.prerequisites, &base.prerequisites),
+            exported: field(&self.exported, &base.exported),
+            version: field(&self.version, &base.version),
+            author: field(&self.author, &base.author),
         }
     }
 
@@ -409,8 +468,6 @@ pub struct Project {
     #[serde(default)]
     pub author: String,
     #[serde(default)]
-    pub labels: DocumentLabels,
-    #[serde(default)]
     pub steps: Vec<Step>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub deleted_steps: Vec<DeletedStep>,
@@ -431,7 +488,6 @@ impl Project {
             language: default_language(),
             version: default_document_version(),
             author: String::new(),
-            labels: DocumentLabels::default(),
             steps: Vec::new(),
             deleted_steps: Vec::new(),
         }
@@ -773,6 +829,25 @@ pub struct Settings {
     /// Last product picked when starting a recording.
     #[serde(default)]
     pub default_product_id: Option<String>,
+    /// Wording the user changed, keyed by language. Anything left empty uses
+    /// the built-in wording for that language.
+    #[serde(default)]
+    pub labels: BTreeMap<String, DocumentLabels>,
+}
+
+/// The fixed wording for one language, and where it came from.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedLabels {
+    /// What exports will print.
+    pub labels: DocumentLabels,
+    /// What it would be without the user's changes.
+    pub defaults: DocumentLabels,
+    /// Walkmark ships wording for this language. When false, the user types
+    /// it or asks the AI.
+    pub localized: bool,
+    /// The user has changed something for this language.
+    pub customized: bool,
 }
 
 fn default_products() -> Vec<Product> {
@@ -795,6 +870,7 @@ impl Default for Settings {
             onboarded: false,
             products: vec![general],
             default_product_id: Some(default_id),
+            labels: BTreeMap::new(),
         }
     }
 }
@@ -816,11 +892,58 @@ impl Settings {
                 );
             }
         }
+        self.clamp_labels();
         for config in self.providers.values_mut() {
             config.model = crate::limits::clamp(&config.model, crate::limits::MODEL_ID);
             config.base_url =
                 crate::limits::clamp(&config.base_url, crate::limits::BASE_URL);
         }
+    }
+
+    /// The user's own wording for `language`, matched without regard to case.
+    fn custom_labels(&self, language: &str) -> Option<&DocumentLabels> {
+        let wanted = language.trim().to_lowercase();
+        self.labels
+            .iter()
+            .find(|(name, _)| name.trim().to_lowercase() == wanted)
+            .map(|(_, labels)| labels)
+    }
+
+    pub fn resolve_labels(&self, language: &str) -> ResolvedLabels {
+        let built_in = DocumentLabels::built_in(language);
+        let localized = built_in.is_some();
+        let defaults = built_in.unwrap_or_else(DocumentLabels::english);
+        let custom = self.custom_labels(language).filter(|c| !c.is_blank());
+        ResolvedLabels {
+            labels: custom.map_or_else(|| defaults.clone(), |c| c.over(&defaults)),
+            customized: custom.is_some(),
+            localized,
+            defaults,
+        }
+    }
+
+    /// Keep saved wording bounded and drop entries that say nothing.
+    fn clamp_labels(&mut self) {
+        use crate::limits::{clamp_trim, DOCUMENT_LABEL, LANGUAGE};
+        let cleaned: BTreeMap<String, DocumentLabels> = std::mem::take(&mut self.labels)
+            .into_iter()
+            .map(|(language, labels)| {
+                let clean = |text: &str| clamp_trim(text, DOCUMENT_LABEL);
+                (
+                    clamp_trim(&language, LANGUAGE),
+                    DocumentLabels {
+                        guide: clean(&labels.guide),
+                        prerequisites: clean(&labels.prerequisites),
+                        exported: clean(&labels.exported),
+                        version: clean(&labels.version),
+                        author: clean(&labels.author),
+                    },
+                )
+            })
+            .filter(|(language, labels)| !language.is_empty() && !labels.is_blank())
+            .take(crate::limits::LABEL_LANGUAGES_MAX)
+            .collect();
+        self.labels = cleaned;
     }
 
     pub fn normalize_products(&mut self) {
@@ -920,3 +1043,73 @@ impl ExportFormat {
         }
     }
 }
+
+#[cfg(test)]
+mod label_tests {
+    use super::*;
+
+    #[test]
+    fn english_and_built_in_languages_are_localized() {
+        let settings = Settings::default();
+        let english = settings.resolve_labels("English");
+        assert!(english.localized && !english.customized);
+        assert_eq!(english.labels.prerequisites, "Before you start");
+
+        let italian = settings.resolve_labels(" italian ");
+        assert!(italian.localized);
+        assert_eq!(italian.labels.prerequisites, "Prima di iniziare");
+        assert_eq!(italian.labels.exported, "Esportato il");
+    }
+
+    #[test]
+    fn other_languages_start_from_english_and_say_they_need_translating() {
+        let lithuanian = Settings::default().resolve_labels("Lithuanian");
+        assert!(!lithuanian.localized);
+        assert_eq!(lithuanian.labels, DocumentLabels::english());
+    }
+
+    #[test]
+    fn the_users_wording_wins_field_by_field() {
+        let mut settings = Settings::default();
+        settings.labels.insert(
+            "ITALIAN".into(),
+            DocumentLabels {
+                prerequisites: "Requisiti".into(),
+                ..Default::default()
+            },
+        );
+        let italian = settings.resolve_labels("Italian");
+        assert!(italian.customized);
+        assert_eq!(italian.labels.prerequisites, "Requisiti");
+        assert_eq!(italian.labels.guide, "Guida passo passo");
+        assert_eq!(italian.defaults.prerequisites, "Prima di iniziare");
+    }
+
+    #[test]
+    fn saving_drops_empty_entries_and_trims_the_rest() {
+        let mut settings = Settings::default();
+        settings.labels.insert("Italian".into(), DocumentLabels::default());
+        settings.labels.insert(
+            "Lithuanian".into(),
+            DocumentLabels {
+                guide: format!("  {}  ", "x".repeat(200)),
+                ..Default::default()
+            },
+        );
+        settings.normalize_products();
+        assert!(!settings.labels.contains_key("Italian"));
+        assert_eq!(
+            settings.labels["Lithuanian"].guide.chars().count(),
+            crate::limits::DOCUMENT_LABEL
+        );
+    }
+
+    #[test]
+    fn older_settings_files_have_no_custom_wording() {
+        let mut value = serde_json::to_value(Settings::default()).unwrap();
+        value.as_object_mut().unwrap().remove("labels");
+        let loaded: Settings = serde_json::from_value(value).unwrap();
+        assert!(loaded.labels.is_empty());
+    }
+}
+

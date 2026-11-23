@@ -439,7 +439,6 @@ pub struct ProjectMeta {
     pub language: Option<String>,
     pub version: Option<String>,
     pub author: Option<String>,
-    pub labels: Option<DocumentLabels>,
 }
 
 #[tauri::command]
@@ -480,16 +479,6 @@ pub fn update_project_meta(
     }
     if let Some(author) = meta.author {
         project.author = limits::clamp_trim(&author, limits::DOCUMENT_AUTHOR);
-    }
-    if let Some(labels) = meta.labels {
-        let clean = |text: String| limits::clamp_trim(&text, limits::DOCUMENT_LABEL);
-        project.labels = DocumentLabels {
-            guide: clean(labels.guide),
-            prerequisites: clean(labels.prerequisites),
-            exported: clean(labels.exported),
-            version: clean(labels.version),
-            author: clean(labels.author),
-        };
     }
     project.touch();
     storage::save_project(&app, project)?;
@@ -926,8 +915,15 @@ menu — for Mistral, use Small or Large."
     Ok(())
 }
 
-/// Fixed labels ("Before you start", "Version", …) in the guide's language.
-/// Returns them for the caller to review and save; nothing is stored here.
+/// The fixed wording exports print for `language`, and whether Walkmark ships
+/// it or the user supplies it.
+#[tauri::command]
+pub fn document_labels(state: State<AppState>, language: String) -> ResolvedLabels {
+    state.settings.lock().resolve_labels(&language)
+}
+
+/// Asks the AI for the fixed wording in `language`. Returns it for the caller
+/// to review and save; nothing is stored here.
 #[tauri::command]
 pub async fn translate_labels(
     app: AppHandle,

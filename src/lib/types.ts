@@ -59,7 +59,7 @@ export interface Step {
   manual: boolean;
 }
 
-/** Wording exports print around the guide's own text. Empty means the English default. */
+/** Wording exports print around the guide's own text. Empty means the default for the language. */
 export interface DocumentLabels {
   guide: string;
   prerequisites: string;
@@ -86,7 +86,6 @@ export interface Project {
   version: string;
   /** Who made the guide, printed under the title. */
   author: string;
-  labels: DocumentLabels;
   steps: Step[];
   deletedSteps?: { index: number; step: Step }[];
 }
@@ -158,6 +157,19 @@ export interface Settings {
   onboarded: boolean;
   products: Product[];
   defaultProductId?: string | null;
+  /** Wording the user changed, keyed by language. Sparse. */
+  labels?: Record<string, DocumentLabels>;
+}
+
+/** The fixed wording for one language, and where it came from. */
+export interface ResolvedLabels {
+  /** What exports will print. */
+  labels: DocumentLabels;
+  /** What it would be without the user's changes. */
+  defaults: DocumentLabels;
+  /** Walkmark ships wording for this language. */
+  localized: boolean;
+  customized: boolean;
 }
 
 export type RecordingState = "idle" | "counting" | "recording" | "paused" | "stopping";

@@ -13,7 +13,7 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
     let mut body = String::new();
     body.push_str(&format!(
         "<header class=\"doc-head\">\n<p class=\"eyebrow\">{}</p>\n<h1>{}</h1>\n",
-        esc(project.labels.guide()),
+        esc(options.labels.guide()),
         esc(&project.title)
     ));
     let details = super::detail_parts(project, options);
@@ -38,7 +38,7 @@ pub fn render(project: &Project, steps: &[RenderedStep], options: &ExportOptions
     if options.include_prerequisites && !project.prerequisites.is_empty() {
         body.push_str(&format!(
             "<aside class=\"callout\">\n<h2>{}</h2>\n<ul>\n",
-            esc(project.labels.prerequisites())
+            esc(options.labels.prerequisites())
         ));
         for item in &project.prerequisites {
             body.push_str(&format!("<li>{}</li>\n", esc(item)));
@@ -233,6 +233,7 @@ figure img{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::DocumentLabels;
 
     fn steps() -> Vec<RenderedStep> {
         vec![RenderedStep {
@@ -248,12 +249,8 @@ mod tests {
         let mut project = Project::new("Installazione", "");
         project.prerequisites = vec!["Un account".into()];
         project.author = "Erik".into();
-        project.labels.guide = "Guida passo passo".into();
-        project.labels.prerequisites = "Prima di iniziare".into();
-        project.labels.exported = "Esportato il".into();
-        project.labels.version = "Versione".into();
-        project.labels.author = "Autore".into();
         let options = ExportOptions {
+            labels: DocumentLabels::built_in("Italian").unwrap(),
             exported_on: "2026-11-23".into(),
             ..Default::default()
         };

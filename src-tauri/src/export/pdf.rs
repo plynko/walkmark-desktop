@@ -69,7 +69,7 @@ pub fn render(
 
     // --- Title block -----------------------------------------------------
     writer.text(
-        &project.labels.guide().to_uppercase(),
+        &options.labels.guide().to_uppercase(),
         &Style {
             size: 8.5,
             bold: true,
@@ -130,7 +130,7 @@ pub fn render(
     if options.include_prerequisites && !project.prerequisites.is_empty() {
         writer.gap(22.0);
         writer.text(
-            project.labels.prerequisites(),
+            options.labels.prerequisites(),
             &Style {
                 size: 11.0,
                 bold: true,
@@ -684,9 +684,6 @@ mod tests {
         let mut project = Project::new("Guida all'installazione", "Display");
         project.prerequisites = vec!["Un account".into()];
         project.author = "Erik".into();
-        project.labels.guide = "Guida passo passo".into();
-        project.labels.prerequisites = "Prima di iniziare".into();
-        project.labels.exported = "Esportato il".into();
         let steps = vec![RenderedStep {
             number: 1,
             title: "Apri l'app".into(),
@@ -694,6 +691,7 @@ mod tests {
             image: None,
         }];
         let options = ExportOptions {
+            labels: crate::models::DocumentLabels::built_in("Italian").unwrap(),
             exported_on: "2026-11-23".into(),
             ..Default::default()
         };

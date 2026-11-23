@@ -10,10 +10,11 @@
 	import { autosize } from '$lib/autosize';
 	import MarkdownField from './MarkdownField.svelte';
 	import InlineField from './InlineField.svelte';
+	import * as api from '$lib/api';
 	import type { DocumentLabels } from '$lib/types';
 
-	// What exports print when a label is left empty. Mirrors `DocumentLabels` in Rust.
-	const DEFAULT_LABELS: DocumentLabels = {
+	// Until the real wording arrives (and whenever it is unavailable) show the English defaults.
+	const ENGLISH: DocumentLabels = {
 		guide: 'Step-by-step guide',
 		prerequisites: 'Before you start',
 		exported: 'Exported',
@@ -58,9 +59,23 @@
 		void store.patchMeta(meta);
 	}
 
-	function patchLabel(key: keyof DocumentLabels, value: string) {
-		patchMeta({ labels: { ...project.labels, [key]: value } });
-	}
+	// Fixed wording for this guide's language. It lives in Settings → Writing.
+	let words = $state<DocumentLabels>(ENGLISH);
+	$effect(() => {
+		void store.settings.labels;
+		let current = true;
+		void api
+			.documentLabels(project.language || store.settings.language)
+			.then((next) => {
+				if (current) words = next.labels;
+			})
+			.catch(() => {
+				if (current) words = ENGLISH;
+			});
+		return () => {
+			current = false;
+		};
+	});
 
 	// The real date is stamped at export time; this is only a preview of it.
 	const today = new Date().toLocaleDateString('sv-SE');
@@ -96,14 +111,12 @@
 		{/if}
 	</div>
 
-	<InlineField
-		value={project.labels.guide}
-		label="Guide label"
-		placeholder={DEFAULT_LABELS.guide}
-		maxlength={LIMITS.documentLabel}
-		onCommit={(value) => patchLabel('guide', value)}
-		class="-mx-1 mb-1 text-[11.5px] font-semibold tracking-wider text-(--text)/56 uppercase"
-	/>
+	<p
+		class="mb-1 text-[11.5px] font-semibold tracking-wider text-(--text)/56 uppercase"
+		data-tooltip="Change this wording in Settings → Writing"
+	>
+		{words.guide}
+	</p>
 
 	<textarea
 		use:autosize={titleDraft}
@@ -125,61 +138,31 @@
 		class="-mx-1.5 w-full resize-none overflow-hidden rounded-xl bg-transparent px-1.5 py-0.5 text-[27px] font-semibold leading-[1.2] tracking-[-0.02em] outline-none placeholder:text-(--text)/40 hover:bg-(--text)/5 focus:bg-(--text)/8 focus:ring-1 focus:ring-(--text)/24"
 	></textarea>
 
-	<div class="mt-2 -mx-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-[12.5px] text-(--text)/56">
-		<InlineField
-			value={project.labels.exported}
-			label="Export date label"
-			placeholder={DEFAULT_LABELS.exported}
-			maxlength={LIMITS.documentLabel}
-			onCommit={(value) => patchLabel('exported', value)}
-		/>
+	<div class="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-(--text)/56">
+		<span>{words.exported}</span>
 		<span
-			class="-ml-1 tabular-nums"
-			data-tooltip="Filled in automatically on the day you export"
-			title="Filled in automatically on the day you export">{today}</span>
+			class="tabular-nums"
+			data-tooltip="Filled in automatically on the day you export">{today}</span>
 		<span aria-hidden="true">·</span>
-		<InlineField
-			value={project.labels.version}
-			label="Version label"
-			placeholder={DEFAULT_LABELS.version}
-			maxlength={LIMITS.documentLabel}
-			onCommit={(value) => patchLabel('version', value)}
-		/>
+		<span>{words.version}</span>
 		<InlineField
 			value={project.version}
 			label="Version"
 			placeholder="1.0"
 			maxlength={LIMITS.documentVersion}
 			onCommit={(value) => patchMeta({ version: value })}
-			class="-ml-1 text-(--text)/72"
+			class="-mx-1 text-(--text)/72"
 		/>
 		<span aria-hidden="true">·</span>
-		<InlineField
-			value={project.labels.author}
-			label="Author label"
-			placeholder={DEFAULT_LABELS.author}
-			maxlength={LIMITS.documentLabel}
-			onCommit={(value) => patchLabel('author', value)}
-		/>
+		<span>{words.author}</span>
 		<InlineField
 			value={project.author}
 			label="Author"
 			placeholder="Your name"
 			maxlength={LIMITS.documentAuthor}
 			onCommit={(value) => patchMeta({ author: value })}
-			class="-ml-1 text-(--text)/72"
+			class="-mx-1 text-(--text)/72"
 		/>
-		<Button
-			size="sm"
-			variant="ghost"
-			class="ml-auto"
-			disabled={store.translatingLabels}
-			data-tooltip="Translate the labels above and “Before you start” with AI, into the guide's language"
-			onclick={() => void store.translateLabels()}
-		>
-			<Icon icon="lucide:sparkles" class="size-3.5" aria-hidden="true" />
-			{store.translatingLabels ? 'Translating…' : 'Translate labels'}
-		</Button>
 	</div>
 
 	<MarkdownField
@@ -212,14 +195,12 @@
 		</button>
 	{:else}
 		<div class="mt-5 rounded-3xl bg-(--text)/5 p-3.5">
-			<InlineField
-				value={project.labels.prerequisites}
-				label="Prerequisites heading"
-				placeholder={DEFAULT_LABELS.prerequisites}
-				maxlength={LIMITS.documentLabel}
-				onCommit={(value) => patchLabel('prerequisites', value)}
-				class="-ml-1 mb-1.5 text-[11.5px] font-semibold tracking-wider text-(--text)/56 uppercase"
-			/>
+			<p
+				class="mb-2 text-[11.5px] font-semibold tracking-wider text-(--text)/56 uppercase"
+				data-tooltip="Change this wording in Settings → Writing"
+			>
+				{words.prerequisites}
+			</p>
 			<ul class="flex flex-col gap-1">
 				{#each project.prerequisites as item, index (item + index)}
 					<li class="group flex items-center gap-2">

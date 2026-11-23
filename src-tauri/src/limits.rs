@@ -7,6 +7,7 @@ pub const PREREQUISITES_MAX: usize = 10;
 pub const DOCUMENT_VERSION: usize = 40;
 pub const DOCUMENT_AUTHOR: usize = 80;
 pub const DOCUMENT_LABEL: usize = 60;
+pub const LABEL_LANGUAGES_MAX: usize = 40;
 pub const STEP_TITLE: usize = 80;
 pub const STEP_BODY: usize = 2000;
 pub const AUDIENCE: usize = 300;

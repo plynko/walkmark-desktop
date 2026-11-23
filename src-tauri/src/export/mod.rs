@@ -5,11 +5,12 @@ pub mod pdf;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, Result};
 use crate::imaging;
-use crate::models::{ExportFormat, Project};
+use crate::models::{DocumentLabels, ExportFormat, Project};
+use crate::state::AppState;
 use crate::storage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +29,10 @@ pub struct ExportOptions {
     /// Filled in by `write` when the document is produced; ignored on input.
     #[serde(default)]
     pub exported_on: String,
+    /// Fixed wording in the guide's language. Filled in by `write` from
+    /// Settings; ignored on input.
+    #[serde(skip)]
+    pub labels: DocumentLabels,
     /// HTML only. "light" | "dark" | "auto"
     pub theme: String,
 }
@@ -43,6 +48,7 @@ impl Default for ExportOptions {
             include_prerequisites: true,
             include_details: true,
             exported_on: String::new(),
+            labels: DocumentLabels::default(),
             theme: "auto".into(),
         }
     }
@@ -54,12 +60,12 @@ fn default_true() -> bool {
 
 /// The parts of the line under the title, e.g. `["Exported 2026-11-23",
 /// "Version 1.0", "Author Erik"]`. Version and author are left out while empty.
-/// Labels come from the guide, so a translated guide gets translated details.
+/// The labels come from Settings for the guide's language.
 pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<String> {
     if !options.include_details {
         return Vec::new();
     }
-    let labels = &project.labels;
+    let labels = &options.labels;
     let mut parts = Vec::new();
     if !options.exported_on.is_empty() {
         parts.push(format!("{} {}", labels.exported(), options.exported_on));
@@ -161,6 +167,15 @@ pub fn write(
     let steps = prepare(app, project, options)?;
     let mut options = options.clone();
     options.exported_on = chrono::Local::now().format("%Y-%m-%d").to_string();
+    options.labels = {
+        let settings = app.state::<AppState>().settings.lock().clone();
+        let language = if project.language.trim().is_empty() {
+            settings.language.clone()
+        } else {
+            project.language.clone()
+        };
+        settings.resolve_labels(&language).labels
+    };
     let options = &options;
     if let Some(parent) = destination.parent() {
         std::fs::create_dir_all(parent)?;
@@ -221,7 +236,6 @@ pub(crate) fn assets_dir_for(destination: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::DocumentLabels;
 
     #[test]
     fn slugs_are_url_safe() {
@@ -238,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn details_use_the_guides_own_labels() {
+    fn details_use_the_languages_labels() {
         let mut project = Project::new("Guida", "");
         project.author = "Erik".into();
         assert_eq!(
@@ -246,12 +260,13 @@ mod tests {
             ["Exported 2026-11-23", "Version 1.0", "Author Erik"]
         );
 
-        project.labels.exported = "Esportato il".into();
-        project.labels.version = "Versione".into();
-        project.labels.author = "Autore".into();
         project.version = "2.1".into();
+        let italian = ExportOptions {
+            labels: DocumentLabels::built_in("Italian").unwrap(),
+            ..dated()
+        };
         assert_eq!(
-            detail_parts(&project, &dated()),
+            detail_parts(&project, &italian),
             ["Esportato il 2026-11-23", "Versione 2.1", "Autore Erik"]
         );
     }
@@ -286,6 +301,5 @@ mod tests {
         let project: Project = serde_json::from_str(json).unwrap();
         assert_eq!(project.version, "1.0");
         assert_eq!(project.author, "");
-        assert_eq!(project.labels, DocumentLabels::default());
     }
 }

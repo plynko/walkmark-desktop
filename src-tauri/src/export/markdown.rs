@@ -40,7 +40,7 @@ pub fn write(
     }
 
     if options.include_prerequisites && !project.prerequisites.is_empty() {
-        doc.push_str(&format!("## {}\n\n", project.labels.prerequisites()));
+        doc.push_str(&format!("## {}\n\n", options.labels.prerequisites()));
         for item in &project.prerequisites {
             doc.push_str(&format!("- {}\n", item.trim()));
         }

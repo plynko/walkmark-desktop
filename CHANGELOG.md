@@ -4,7 +4,7 @@
 
 - Highlight an area with a semi-transparent Tint rectangle, or point at it with an Arrow. Both can be recoloured in the editor and are embedded in exported images.
 - Stop writing now interrupts requests that are already running, including the overview pass, and returns unfinished steps to how they were.
-- Edit the wording exports print around a guide — the small heading above the title and “Before you start” — so a guide can be written in any language. Translate them manually or with one click using AI.
+- The fixed wording in exports — the heading above the title, “Before you start”, and the words “Exported”, “Version” and “Author” — now follows the guide's language. Italian, Spanish, French, German, Portuguese and Dutch are built in; for any other language, translate it with AI or type your own in Settings → Writing.
 - A line under the title shows the export date, an editable version number and the author. It can be turned off in the export options.
 - Projects now record the version of their file format, so future releases can open older guides safely.
 

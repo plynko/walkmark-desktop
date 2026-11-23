@@ -109,7 +109,9 @@ Screenshots and prompts are sent **only when you click Write**, and only to the 
 
 ## Translating the fixed wording
 
-Exports print a few fixed words around your text: the heading above the title, “Before you start”, and “Exported”, “Version” and “Author” in the line under the title. In the editor, **Translate labels** asks the model selected in the write menu to translate them into the guide's language. It sends only those five short labels, no screenshots, and changes nothing else. You can edit the result, or type your own wording from the start.
+Exports print a few fixed words around your text: the heading above the title, “Before you start”, and “Exported”, “Version” and “Author” in the line under the title. They are set per language in **Settings → Writing → Wording in exports**, and follow the Language setting there.
+
+Walkmark has this wording built in for English, Italian, Spanish, French, German, Portuguese and Dutch. For any other language, select **Translate with AI** to translate all five with the model chosen in Settings, or type your own. It sends only those five short labels, no screenshots. Anything you change is kept for that language; **Back to the built-in wording** undoes it.
 
 ## Stopping a write job
 

@@ -12,6 +12,7 @@
 	import { ToggleGroup, ToggleGroupItem } from "$lib/components/ui/toggle-group";
 	import LanguageSelect from "$lib/components/LanguageSelect.svelte";
 	import ProductsEditor from "$lib/components/ProductsEditor.svelte";
+	import DocumentWording from "$lib/components/DocumentWording.svelte";
 	import { LIMITS } from "$lib/limits";
 
 	const settings = $derived(store.settings);
@@ -57,6 +58,10 @@
 			(v) => patch({ language: v })
 		}
 	/>
+
+	<div class="border-t border-(--text)/8 pt-5">
+		<DocumentWording />
+	</div>
 
 	<div class="space-y-1.5 border-t border-(--text)/8 pt-5">
 		<Label>Default product</Label>

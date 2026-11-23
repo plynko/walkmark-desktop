@@ -16,6 +16,7 @@ import type {
   ProviderCatalog,
   ProviderId,
   RecordingStatus,
+  ResolvedLabels,
   Settings,
   Step,
 } from "./types";
@@ -113,19 +114,18 @@ export const updateProjectMeta = (meta: {
   language?: string;
   version?: string;
   author?: string;
-  labels?: DocumentLabels;
 }) => call<Project>("update_project_meta", { meta });
 
-/** The guide's fixed labels in `language`, written by the AI. Nothing is saved. */
-export const translateLabels = (request: {
-  provider?: ProviderId;
-  model?: string;
-  language?: string;
-}) =>
+/** The fixed wording exports print for `language`. */
+export const documentLabels = (language: string) =>
+  call<ResolvedLabels>("document_labels", { language });
+
+/** The fixed wording in `language`, written by the AI. Nothing is saved. */
+export const translateLabels = (language: string) =>
   call<DocumentLabels>("translate_labels", {
-    provider: request.provider ?? null,
-    model: request.model ?? null,
-    language: request.language ?? null,
+    provider: null,
+    model: null,
+    language,
   });
 
 const framePathCache = new Map<string, string>();
