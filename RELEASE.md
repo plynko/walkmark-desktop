@@ -12,16 +12,13 @@ Also bump `APP_VERSION` in [walkmark-landing `src/lib/downloads.ts`](https://git
 
 ## 2. Update changelog
 
-Add a section to `CHANGELOG.md`.
+Add a section titled `## X.Y.Z — date` to `CHANGELOG.md`. Its text becomes the release notes.
 
-## 3. Tag and push
+## 3. Push to main
 
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
+Nothing else to do. The [Release workflow](.github/workflows/release.yml) runs on every push to `main`. When the version has no `vX.Y.Z` tag yet, it creates the tag, builds macOS (Apple Silicon + Intel), Windows (x64 + ARM64), and Linux installers, and attaches them to a new GitHub Release.
 
-The [Release workflow](.github/workflows/release.yml) builds macOS (Apple Silicon + Intel), Windows (x64 + ARM64), and Linux installers and attaches them to the GitHub Release.
+The workflow fails, without releasing, if the three version numbers differ or the changelog has no section for the version. A push with an already-tagged version does nothing. Run it by hand from the Actions tab (**Run workflow**) if a build needs repeating.
 
 ## 4. Local build (one platform)
 

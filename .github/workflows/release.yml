@@ -1,16 +1,89 @@
 name: Release
 
+# A release is published automatically when a push to main carries a version
+# that has no tag yet. To release: bump the version (package.json,
+# src-tauri/tauri.conf.json, src-tauri/Cargo.toml), add a section for it to
+# CHANGELOG.md, and push to main.
+
 permissions:
   contents: write
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
+
+      - name: Read the version and decide whether to release
+        id: check
+        run: |
+          pkg=$(jq -r .version package.json)
+          conf=$(jq -r .version src-tauri/tauri.conf.json)
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -n1)
+          if [ "$pkg" != "$conf" ] || [ "$pkg" != "$cargo" ]; then
+            echo "::error::Versions differ: package.json=$pkg tauri.conf.json=$conf Cargo.toml=$cargo"
+            exit 1
+          fi
+          echo "version=$pkg" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$pkg" >/dev/null; then
+            echo "Tag v$pkg already exists, nothing to release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! grep -q "^## $pkg " CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $pkg"
+            exit 1
+          fi
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from the changelog
+        if: steps.check.outputs.release == 'true'
+        run: |
+          v='${{ steps.check.outputs.version }}'
+          awk -v v="$v" '
+            $0 ~ "^## " v " " { on=1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > release-notes.md
+          cat >> release-notes.md <<'EOF'
+
+          ## Downloads
+
+          | Platform | File |
+          | --- | --- |
+          | macOS (Apple Silicon) | `Walkmark_*_aarch64.dmg` |
+          | macOS (Intel) | `Walkmark_*_x64.dmg` |
+          | Windows (x64) | `Walkmark_*_x64-setup.exe` |
+          | Windows (ARM64) | `Walkmark_*_arm64-setup.exe` |
+          | Linux | `Walkmark_*_amd64.AppImage` or `.deb` |
+
+          The macOS builds are not signed: open them the first time with right-click, then Open.
+          EOF
+
+      - name: Keep the notes for the build jobs
+        if: steps.check.outputs.release == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+
   build:
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     permissions:
       contents: write
     strategy:
@@ -42,6 +115,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -65,6 +142,17 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Read the release notes
+        id: notes
+        shell: bash
+        run: |
+          {
+            echo 'body<<NOTES_EOF'
+            cat release-notes.md
+            echo
+            echo 'NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and bundle
         uses: tauri-apps/tauri-action@v1
         env:
@@ -72,16 +160,8 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Walkmark v__VERSION__
-          releaseBody: |
-            See [documentation](https://github.com/e-vicius/walkmark-desktop/tree/main/docs) for install notes.
-
-            | Platform | File |
-            | --- | --- |
-            | macOS (Apple Silicon) | `Walkmark_*_aarch64.dmg` |
-            | macOS (Intel) | `Walkmark_*_x64.dmg` |
-            | Windows (x64) | `Walkmark_*_x64-setup.exe` |
-            | Windows (ARM64) | `Walkmark_*_arm64-setup.exe` |
-            | Linux | `Walkmark_*_amd64.AppImage` or `.deb` |
+          releaseBody: ${{ steps.notes.outputs.body }}
+          commitish: ${{ github.sha }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

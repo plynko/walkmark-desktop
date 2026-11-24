@@ -128,10 +128,9 @@ Deep dive: [Architecture](architecture.md).
 
 Documented in [RELEASE.md](https://github.com/e-vicius/walkmark-desktop/blob/main/RELEASE.md). Summary:
 
-1. Bump version in `src-tauri/tauri.conf.json` and `package.json`.
-2. Update [CHANGELOG.md](https://github.com/e-vicius/walkmark-desktop/blob/main/CHANGELOG.md).
-3. Tag `vX.Y.Z` and push — GitHub Actions builds platform artifacts.
-4. Attach or verify release assets on GitHub Releases.
+1. Bump version in `src-tauri/tauri.conf.json`, `package.json` and `src-tauri/Cargo.toml`.
+2. Add the version's section to [CHANGELOG.md](https://github.com/e-vicius/walkmark-desktop/blob/main/CHANGELOG.md).
+3. Push to `main` — GitHub Actions tags the version, builds the platform artifacts and publishes the release.
 
 ## Contributing
 
