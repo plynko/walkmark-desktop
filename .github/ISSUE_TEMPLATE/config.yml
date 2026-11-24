@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://steppy.app/docs
+    url: https://github.com/plynko/walkmark-desktop/tree/main/docs
     about: Guides for install, recording, AI writing, and export
   - name: Security issue
-    url: https://github.com/e-vicius/steppy-desktop/security/advisories/new
+    url: https://github.com/plynko/walkmark-desktop/security/advisories/new
     about: Report a vulnerability privately (do not open a public issue)

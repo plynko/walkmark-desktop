@@ -8,8 +8,6 @@ Update version in all three places:
 - `src-tauri/tauri.conf.json`
 - `src-tauri/Cargo.toml` (`[package].version`)
 
-Also bump `APP_VERSION` in [walkmark-landing `src/lib/downloads.ts`](https://github.com/e-vicius/walkmark-landing/blob/main/src/lib/downloads.ts).
-
 ## 2. Update changelog
 
 Add a section titled `## X.Y.Z — date` to `CHANGELOG.md`. Its text becomes the release notes.
@@ -39,7 +37,7 @@ Artifacts land in `src-tauri/target/release/bundle/`:
 
 ## 5. Verify downloads
 
-Open the [latest release](https://github.com/e-vicius/walkmark-desktop/releases/latest) and confirm filenames match `src/lib/downloads.ts` on the landing site.
+Open the [latest release](https://github.com/plynko/walkmark-desktop/releases/latest) and confirm that every installer listed above is attached.
 
 ## Code signing (optional)
 

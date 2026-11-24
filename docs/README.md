@@ -1,6 +1,6 @@
 # Walkmark documentation
 
-Guides for the open source desktop app. The same docs are published at [walkmark.app/docs](https://walkmark.app/docs).
+Guides for the open source desktop app. The original project also publishes them at [walkmark.app/docs](https://walkmark.app/docs).
 
 ## For people using Walkmark
 
@@ -23,10 +23,10 @@ Guides for the open source desktop app. The same docs are published at [walkmark
 | --- | --- |
 | [Build from source](build-from-source.md) | Prerequisites, dev run, release builds |
 | [Architecture](architecture.md) | Tauri layout, modules, IPC, data flow |
-| [Contributing](https://github.com/e-vicius/walkmark-desktop/blob/main/CONTRIBUTING.md) | PRs, tests, code style |
+| [Contributing](https://github.com/plynko/walkmark-desktop/blob/main/CONTRIBUTING.md) | PRs, tests, code style |
 
 ## Quick links
 
-- [Download latest release](https://github.com/e-vicius/walkmark-desktop/releases/latest)
-- [Report an issue](https://github.com/e-vicius/walkmark-desktop/issues)
-- [Walkmark Cloud](https://github.com/e-vicius/walkmark-desktop/blob/main/README.md#open-source-vs-cloud) (coming soon)
+- [Download latest release](https://github.com/plynko/walkmark-desktop/releases/latest)
+- [Report an issue](https://github.com/plynko/walkmark-desktop/issues)
+- [Walkmark Cloud](https://github.com/plynko/walkmark-desktop/blob/main/README.md#open-source-vs-cloud) (coming soon)

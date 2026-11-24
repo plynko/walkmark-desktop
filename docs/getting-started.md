@@ -4,15 +4,13 @@ Walkmark turns a workflow you perform once into step-by-step documentation someo
 
 ## Install
 
-Download the latest release for your platform from [GitHub Releases](https://github.com/e-vicius/walkmark-desktop/releases/latest):
+Download the latest release for your platform from [GitHub Releases](https://github.com/plynko/walkmark-desktop/releases/latest):
 
 | Platform | File | Notes |
 | --- | --- | --- |
 | **macOS** | `Walkmark_*_aarch64.dmg` or `*_x64.dmg` | Apple Silicon or Intel |
 | **Windows** | `*_x64-setup.exe` or `*_arm64-setup.exe` | x64 or native ARM64 (Surface, Snapdragon PCs) |
 | **Linux** | `*_amd64.AppImage` or `*.deb` | AppImage is portable; `.deb` for Debian/Ubuntu |
-
-You can also download from [walkmark.app](https://walkmark.app/#download) — the site detects your OS and recommends the right build.
 
 ### Build from source
 

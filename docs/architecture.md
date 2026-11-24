@@ -117,4 +117,4 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ## Related
 
 - [Build from source](build-from-source.md)
-- [Contributing](https://github.com/e-vicius/walkmark-desktop/blob/main/CONTRIBUTING.md)
+- [Contributing](https://github.com/plynko/walkmark-desktop/blob/main/CONTRIBUTING.md)

@@ -38,7 +38,7 @@ The first `cargo xwin` run downloads Microsoft's Windows SDK and C runtime; by r
 ## Clone and install
 
 ```bash
-git clone https://github.com/e-vicius/walkmark-desktop.git
+git clone https://github.com/plynko/walkmark-desktop.git
 cd walkmark
 pnpm install
 ```
@@ -126,14 +126,14 @@ Deep dive: [Architecture](architecture.md).
 
 ## Release process (maintainers)
 
-Documented in [RELEASE.md](https://github.com/e-vicius/walkmark-desktop/blob/main/RELEASE.md). Summary:
+Documented in [RELEASE.md](https://github.com/plynko/walkmark-desktop/blob/main/RELEASE.md). Summary:
 
 1. Bump version in `src-tauri/tauri.conf.json`, `package.json` and `src-tauri/Cargo.toml`.
-2. Add the version's section to [CHANGELOG.md](https://github.com/e-vicius/walkmark-desktop/blob/main/CHANGELOG.md).
+2. Add the version's section to [CHANGELOG.md](https://github.com/plynko/walkmark-desktop/blob/main/CHANGELOG.md).
 3. Push to `main` — GitHub Actions tags the version, builds the platform artifacts and publishes the release.
 
 ## Contributing
 
-Bug reports and pull requests welcome on [GitHub](https://github.com/e-vicius/walkmark-desktop). See [CONTRIBUTING.md](https://github.com/e-vicius/walkmark-desktop/blob/main/CONTRIBUTING.md).
+Bug reports and pull requests welcome on [GitHub](https://github.com/plynko/walkmark-desktop). See [CONTRIBUTING.md](https://github.com/plynko/walkmark-desktop/blob/main/CONTRIBUTING.md).
 
 Licence: MIT.

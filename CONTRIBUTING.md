@@ -4,7 +4,7 @@ Thanks for helping improve Walkmark.
 
 ## Before you start
 
-- Search [existing issues](https://github.com/e-vicius/walkmark-desktop/issues) so work is not duplicated.
+- Search [existing issues](https://github.com/plynko/walkmark-desktop/issues) so work is not duplicated.
 - For large features, open an issue first to discuss approach.
 - Bug reports should include OS version, Walkmark version, and steps to reproduce.
 
@@ -13,13 +13,11 @@ Thanks for helping improve Walkmark.
 See [docs/build-from-source.md](docs/build-from-source.md).
 
 ```bash
-git clone https://github.com/e-vicius/walkmark-desktop.git
+git clone https://github.com/plynko/walkmark-desktop.git
 cd walkmark
 pnpm install
 pnpm tauri dev
 ```
-
-The landing site at [walkmark-landing](https://github.com/e-vicius/walkmark-landing) imports docs from `docs/` when built with both repos checked out side by side.
 
 ## Architecture overview
 

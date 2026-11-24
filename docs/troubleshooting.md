@@ -106,4 +106,4 @@ See [Getting started — Where projects live](getting-started.md#where-projects-
 
 ## Still stuck?
 
-[Open an issue on GitHub](https://github.com/e-vicius/walkmark-desktop/issues) with your OS version, Walkmark version, and what you expected vs what happened. Screenshots of error toasts help.
+[Open an issue on GitHub](https://github.com/plynko/walkmark-desktop/issues) with your OS version, Walkmark version, and what you expected vs what happened. Screenshots of error toasts help.

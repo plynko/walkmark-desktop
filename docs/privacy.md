@@ -70,10 +70,6 @@ The paid Cloud plan (separate from this open source app) will include its own pr
 
 The open source app does not include analytics or crash reporting today. If that changes, it will be opt-in and documented here.
 
-## Enterprise
-
-Teams with SSO, audit logs, or on-prem deployment requirements can [contact us](mailto:hello@walkmark.app).
-
 ## Related
 
 - [Local models](local-models.md) — keep writing on your hardware
