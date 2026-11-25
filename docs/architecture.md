@@ -12,6 +12,9 @@ Record → frames on disk → edit in UI → Write (AI) → export Markdown/HTML
 2. **Storage** persists projects as `project.json` + `frames/*.png` under app data.
 3. **AI** runs a two-pass write: outline all frames, then per-step bodies (see [AI writing](ai-writing.md)).
 4. **Export** renders included steps to Markdown (+ images folder), self-contained HTML, Word, or PDF.
+5. **Archive** packs a whole document (`project.json` + `frames/`) into a `.zip` for backup or transfer, and imports it back under a fresh id.
+
+Commands that start or stop the capture thread (`start_recording`, `stop_recording`) are `async`. Synchronous Tauri commands run on the main thread on Windows, where creating the HUD window or joining the capture worker from there can freeze the app.
 
 ## Repository layout
 
@@ -27,6 +30,7 @@ src-tauri/src/
   capture/                Source listing, session, input monitoring, detect
   ai/                     Prompts, generation orchestration, model catalog
   ai/provider/            HTTP clients per provider (gemini, openai, …)
+  archive.rs              .zip export/import of a whole document
   export/                 markdown.rs, html.rs, docx.rs, pdf.rs
   imaging.rs              Resize, encode, burn annotations into frames
   storage.rs              settings.json, projects, API key files

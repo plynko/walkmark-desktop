@@ -44,6 +44,10 @@ Required to detect clicks, typing, and scrolling for timely step capture. Withou
 - Check **Get out of the way while recording** in Settings → Recording.
 - A non-fatal toast may explain if the HUD window could not be created.
 
+### Windows: the app freezes on Start, or Stop does nothing
+
+Older versions could freeze when you pressed **Start** and then record nothing, or start a recording that could not be stopped. Update to the latest version. If it still happens, stop with **Shift+Alt+S**, and report the Windows version and whether you recorded a window or the full screen.
+
 ## AI writing issues
 
 ### "Select an AI model"
