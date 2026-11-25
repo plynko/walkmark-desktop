@@ -5,6 +5,7 @@
 - Every click now gets its own screenshot, taken after **Pause after each action**. Quick successive clicks, such as opening a menu and choosing an item, are no longer merged into one step. A double-click gives two steps.
 - Typing now gives one screenshot, taken **Pause after typing** (new setting, default 1 s) after the last key press, instead of one per burst of keys. A scroll gives one screenshot once the wheel stops.
 - The minimum gap between steps now applies only to visual change detection.
+- The floating recording controls no longer appear in the screenshots: the window is excluded from screen capture by the operating system.
 - The date under the title is now an editable field. Left empty, exports still use the day they are made.
 - The Version and Author fields in the guide are wider.
 

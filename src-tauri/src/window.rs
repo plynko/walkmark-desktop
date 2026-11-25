@@ -73,6 +73,9 @@ fn open_hud(app: &AppHandle) -> tauri::Result<()> {
         .always_on_top(true)
         .devtools(false)
         .skip_taskbar(true)
+        // Keeps the controls out of screenshots and screen sharing: the OS leaves
+        // content-protected windows out of captures (Windows and macOS).
+        .content_protected(true)
         // Recording follows the user between Spaces, so the controls must too.
         .visible_on_all_workspaces(true)
         // Taking focus would pull the user out of the app they're documenting.
