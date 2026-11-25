@@ -14,6 +14,7 @@ use rdev::{Button, Event, EventType, Key};
 struct Listener {
     enabled: Arc<AtomicBool>,
     triggered: Arc<AtomicBool>,
+    clicked: Arc<AtomicBool>,
     _handle: JoinHandle<()>,
 }
 
@@ -41,6 +42,8 @@ pub fn ensure_listener() -> bool {
         let triggered = Arc::new(AtomicBool::new(false));
         let worker_enabled = Arc::clone(&enabled);
         let worker_triggered = Arc::clone(&triggered);
+        let clicked = Arc::new(AtomicBool::new(false));
+        let worker_clicked = Arc::clone(&clicked);
 
         let handle = thread::Builder::new()
             .name("walkmark-input".into())
@@ -52,7 +55,7 @@ pub fn ensure_listener() -> bool {
 
                 if let Err(error) = rdev::listen(move |event| {
                     if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        handle_event(&event, &worker_enabled, &worker_triggered);
+                        handle_event(&event, &worker_enabled, &worker_triggered, &worker_clicked);
                     }))
                     .is_err()
                     {
@@ -70,6 +73,7 @@ pub fn ensure_listener() -> bool {
                 return Listener {
                     enabled,
                     triggered,
+                    clicked,
                     _handle: thread::Builder::new()
                         .spawn(|| {})
                         .expect("spawn noop input listener fallback"),
@@ -80,6 +84,7 @@ pub fn ensure_listener() -> bool {
         Listener {
             enabled,
             triggered,
+            clicked,
             _handle: handle,
         }
     });
@@ -87,13 +92,24 @@ pub fn ensure_listener() -> bool {
     true
 }
 
-fn handle_event(event: &Event, enabled: &AtomicBool, triggered: &AtomicBool) {
+fn handle_event(event: &Event, enabled: &AtomicBool, triggered: &AtomicBool, clicked: &AtomicBool) {
     if !enabled.load(Ordering::Relaxed) {
         return;
     }
-    if event_triggers_step(event) {
+    // Always evaluated: it also tracks which modifier keys are held.
+    let triggers = event_triggers_step(event);
+    if is_click(event) {
+        clicked.store(true, Ordering::SeqCst);
+    } else if triggers {
         triggered.store(true, Ordering::SeqCst);
     }
+}
+
+fn is_click(event: &Event) -> bool {
+    matches!(
+        event.event_type,
+        EventType::ButtonPress(Button::Left | Button::Right | Button::Middle)
+    )
 }
 
 pub fn set_enabled(enabled: bool) {
@@ -101,6 +117,7 @@ pub fn set_enabled(enabled: bool) {
         listener.enabled.store(enabled, Ordering::SeqCst);
         if !enabled {
             listener.triggered.store(false, Ordering::SeqCst);
+            listener.clicked.store(false, Ordering::SeqCst);
         }
     }
 }
@@ -111,10 +128,18 @@ pub fn take_trigger() -> bool {
         .is_some_and(|l| l.triggered.swap(false, Ordering::SeqCst))
 }
 
+/// A mouse click happened since the last call. Clicks are handled apart from
+/// keys and scrolling: each one gets its own screenshot.
+pub fn take_click() -> bool {
+    LISTENER
+        .get()
+        .is_some_and(|l| l.clicked.swap(false, Ordering::SeqCst))
+}
+
 pub fn has_trigger() -> bool {
     LISTENER
         .get()
-        .is_some_and(|l| l.triggered.load(Ordering::Relaxed))
+        .is_some_and(|l| l.triggered.load(Ordering::Relaxed) || l.clicked.load(Ordering::Relaxed))
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +243,25 @@ fn is_modifier(key: Key) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn event(event_type: EventType) -> Event {
+        Event {
+            time: std::time::SystemTime::now(),
+            name: None,
+            event_type,
+        }
+    }
+
+    #[test]
+    fn only_button_presses_count_as_clicks() {
+        assert!(is_click(&event(EventType::ButtonPress(Button::Left))));
+        assert!(!is_click(&event(EventType::ButtonRelease(Button::Left))));
+        assert!(!is_click(&event(EventType::KeyPress(Key::KeyA))));
+        assert!(!is_click(&event(EventType::Wheel {
+            delta_x: 0,
+            delta_y: 1
+        })));
+    }
 
     #[test]
     fn walkmark_shortcuts_are_ignored() {

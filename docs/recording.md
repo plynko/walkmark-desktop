@@ -29,7 +29,7 @@ Walkmark uses two mechanisms:
 
 ### Input-based capture (preferred on macOS)
 
-When **Accessibility** permission is granted, Walkmark listens for clicks, key presses, and scrolls. After each action it waits **Pause after each action** (default 300 ms), then grabs a frame.
+When **Accessibility** permission is granted, Walkmark listens for clicks, key presses, and scrolls. Every **click** gets its own screenshot, taken a fraction of a second (20 ms) after the click. After a key press or a scroll it waits **Pause after each action** (default 300 ms), then grabs a frame.
 
 This produces frames aligned with what you did, not arbitrary animation mid-flight.
 
@@ -47,7 +47,7 @@ Tune **Visual sensitivity** and **Wait for the screen to settle** when visual fa
 
 ### Minimum gap
 
-A cooldown (default **800 ms**) between automatic steps. Prevents key repeat, double-clicks, or rapid typing from flooding the guide with near-duplicate frames.
+A cooldown (default **800 ms**) between automatic steps from key presses, scrolling, and screen changes. It keeps rapid typing and key repeat from flooding the guide with near-duplicate frames. Clicks ignore it: each click is captured, so a double-click gives two steps that you can merge in the editor.
 
 ## Recording HUD
 

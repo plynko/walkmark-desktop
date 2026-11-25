@@ -31,6 +31,9 @@ const MAX_CONSECUTIVE_FAILURES: u32 = 6;
 /// step anyway. Without a limit, anything permanently in motion — a video, a
 /// progress spinner, a blinking terminal — would suppress every step for the
 /// whole session.
+/// Pause between a click and its screenshot, so the effect of the click (a
+/// menu opening, a button state) has time to show.
+const CLICK_DELAY: Duration = Duration::from_millis(20);
 const MAX_SETTLE_WAITS: u32 = 4;
 
 #[derive(Clone, Serialize)]
@@ -270,6 +273,11 @@ Settings, or turn on visual fallback in Recording settings."
         if ctl.stop.load(Ordering::SeqCst) {
             break;
         }
+        // Every click gets its own screenshot, taken right after a short delay.
+        let clicked = use_input && input::take_click();
+        if clicked {
+            thread::sleep(CLICK_DELAY);
+        }
         // Frames are kept at full resolution until one is actually committed:
         // most samples are discarded, and resizing every one of them would cost
         // far more than the screen grab itself.
@@ -346,10 +354,12 @@ Settings, or turn on visual fallback in Recording settings."
         };
         let waited_long_enough = settle_waits >= MAX_SETTLE_WAITS;
         let visual_commit = use_visual && changed && gap_ok && (settled || waited_long_enough);
+        // Clicks skip the minimum gap; keys and scrolling keep it so typing
+        // does not produce a step per character.
         let input_commit = use_input && input_ready && gap_ok;
         let first_sample = committed_sig.is_none();
 
-        if forced || first_sample || input_commit || visual_commit {
+        if forced || first_sample || clicked || input_commit || visual_commit {
             if input_commit {
                 input_pending = None;
             }
