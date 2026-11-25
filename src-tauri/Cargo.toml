@@ -1,6 +1,6 @@
 [package]
 name = "walkmark"
-version = "0.2.4"
+version = "0.2.5"
 description = "Turn any workflow into polished step-by-step documentation"
 authors = ["Walkmark"]
 edition = "2021"

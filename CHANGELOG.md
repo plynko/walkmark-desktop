@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5 — 2026-11-25
+
+- Export a document as a portable `.zip` archive (text, steps and screenshots) from the library menu, and import it back with **Import**. An import always creates a new document.
+- Windows: fixed the app freezing when a recording starts, and recordings that could not be stopped. Starting and stopping no longer run on the main thread.
+
 ## 0.2.4 — 2026-11-23
 
 - Export a document straight from the library: a download button on each card, and **Export…** in its menu. The document is opened behind the scenes and closed again with the dialog.
