@@ -168,7 +168,7 @@ fn draw_mouse(image: &mut RgbaImage, rect: Rect) {
         .into_rgba8()
     });
     let (w, h) = (image.width() as f32, image.height() as f32);
-    let size = (rect.w * w).min(rect.h * h).min(w.min(h) * 0.15).round() as u32;
+    let size = (rect.w * w).min(rect.h * h).min(w.min(h) * 0.5).round() as u32;
     if size == 0 {
         return;
     }
@@ -409,6 +409,32 @@ mod tests {
         assert_ne!(*output.get_pixel(100, 50), background);
         let halo = output.get_pixel(94, 50);
         assert!(halo[0] > background[0] && halo[0] < 255);
+    }
+
+    #[test]
+    fn an_enlarged_mouse_marker_is_drawn_at_its_full_size() {
+        let background = Rgba([28, 48, 68, 255]);
+        let image = RgbaImage::from_pixel(400, 400, background);
+        // 160 px wide: well past the old limit of 15% of the image.
+        let marker = Annotation {
+            id: "big".into(),
+            kind: AnnotationKind::Mouse,
+            rect: Rect {
+                x: 0.3,
+                y: 0.3,
+                w: 0.4,
+                h: 0.4,
+            },
+            color: None,
+            stroke: None,
+            arrow: None,
+        };
+        let output = apply_annotations(image, &[marker]);
+        // The halo reaches close to the edge of the 160 px square.
+        let changed = (0..400u32)
+            .filter(|&x| *output.get_pixel(x, 200) != background)
+            .count();
+        assert!(changed > 100, "{changed}");
     }
 
     #[test]

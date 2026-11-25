@@ -106,6 +106,8 @@ The crop and annotations are applied to exported images and to images sent to th
 
 Highlight, Cover, Tint and Arrow support colour options in the toolbar. Highlight also supports outline weight.
 
+To resize a cursor, pick **Select**, click the cursor, then use the mouse wheel over it or the **−** / **+** buttons in the toolbar. The tip stays where it is.
+
 ## Pick a different moment
 
 If a step fired too early or late, click **Choose another frame** on the screenshot when available. Pick one of the nearby frames from the same recording. The step text stays in place.

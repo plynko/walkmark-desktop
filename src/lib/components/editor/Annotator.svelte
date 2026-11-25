@@ -14,7 +14,7 @@
 			value: 'select',
 			label: 'Select',
 			icon: 'lucide:mouse-pointer-2',
-			hint: 'Click to select an annotation, or drag to move it',
+			hint: 'Click to select an annotation, or drag to move it. Scroll over a selected cursor to resize it',
 			shortcut: 'V'
 		},
 		{
@@ -78,7 +78,8 @@
 		annotationStyle,
 		defaultColor,
 		draftStyle,
-		resolveColor
+		resolveColor,
+		scaleMarker
 	} from './annotation-styles';
 	import ArrowShape from './ArrowShape.svelte';
 
@@ -134,6 +135,31 @@
 		if (tool !== 'select') selected = null;
 		cancelGesture();
 	});
+
+	// The wheel resizes a selected cursor marker. The new size is shown while the wheel
+	// turns and saved once it stops, so a scroll is one undo step rather than dozens.
+	let resizing = $state<{ id: string; rect: Rect } | null>(null);
+	let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function commitResize() {
+		clearTimeout(resizeTimer);
+		const current = resizing;
+		resizing = null;
+		if (!current) return;
+		onChange(annotations.map((a) => (a.id === current.id ? { ...a, rect: current.rect } : a)));
+	}
+
+	function onWheel(event: WheelEvent) {
+		if (!editable || tool !== 'select' || !selected || gesture) return;
+		const id = (event.target as Element).closest('[data-annotation-id]')?.getAttribute('data-annotation-id');
+		const marker = annotations.find((a) => a.id === id && a.id === selected && a.kind === 'mouse');
+		if (!marker) return;
+		event.preventDefault();
+		const base = resizing?.id === marker.id ? resizing.rect : marker.rect;
+		resizing = { id: marker.id, rect: scaleMarker(base, Math.exp(-event.deltaY * 0.002)) };
+		clearTimeout(resizeTimer);
+		resizeTimer = setTimeout(commitResize, 250);
+	}
 
 	function toLocal(event: PointerEvent) {
 		const box = surfaceRef!.getBoundingClientRect();
@@ -269,6 +295,7 @@
 	bind:clientHeight={surfaceHeight}
 	data-slot="annotation-surface"
 	onpointerdown={onPointerDown}
+	onwheel={onWheel}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
 	onpointercancel={(event) => {
@@ -282,7 +309,12 @@
 >
 	{#each visibleAnnotations as annotation (annotation.id)}
 		{@const isSelected = selected === annotation.id}
-		{@const rect = gesture?.annotation?.id === annotation.id && draft ? draft : annotation.rect}
+		{@const rect =
+			gesture?.annotation?.id === annotation.id && draft
+				? draft
+				: resizing?.id === annotation.id
+					? resizing.rect
+					: annotation.rect}
 		{#if editable && tool === 'select'}
 			<button
 				type="button"

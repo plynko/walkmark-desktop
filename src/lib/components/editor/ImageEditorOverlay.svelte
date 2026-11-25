@@ -15,6 +15,7 @@
 		HIGHLIGHT_COLORS,
 		REDACT_COLORS,
 		resolveColor,
+		scaleMarker,
 		STROKE_OPTIONS
 	} from './annotation-styles';
 
@@ -118,6 +119,13 @@
 				annotations.map((a) => (a.id === selected ? { ...a, stroke: next } : a))
 			);
 		}
+	}
+
+	function resizeSelected(factor: number) {
+		if (selectedAnnotation?.kind !== 'mouse') return;
+		setAnnotations(
+			annotations.map((a) => (a.id === selected ? { ...a, rect: scaleMarker(a.rect, factor) } : a))
+		);
 	}
 
 	function removeSelected() {
@@ -316,6 +324,33 @@
 									{option.label}
 								</button>
 							{/each}
+						</div>
+					{/if}
+
+					{#if tool === 'select' && selectedAnnotation?.kind === 'mouse'}
+						<span class="hidden h-8 w-px bg-(--text)/10 sm:block"></span>
+						<div
+							class="flex items-center gap-1 rounded-xl bg-(--text)/5 p-1"
+							role="group"
+							aria-label="Cursor size"
+						>
+							<button
+								type="button"
+								onclick={() => resizeSelected(1 / 1.2)}
+								aria-label="Smaller cursor"
+								class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-(--text)/62 hover:bg-(--text)/8 hover:text-(--text)"
+							>
+								−
+							</button>
+							<span class="px-1 text-xs text-(--text)/56">Size</span>
+							<button
+								type="button"
+								onclick={() => resizeSelected(1.2)}
+								aria-label="Larger cursor"
+								class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-(--text)/62 hover:bg-(--text)/8 hover:text-(--text)"
+							>
+								+
+							</button>
 						</div>
 					{/if}
 

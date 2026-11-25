@@ -1,4 +1,4 @@
-import type { Annotation, AnnotationKind, AnnotationStroke } from '$lib/types';
+import type { Annotation, AnnotationKind, AnnotationStroke, Rect } from '$lib/types';
 
 export const DEFAULT_HIGHLIGHT = '#6366f1';
 export const DEFAULT_REDACT = '#18181b';
@@ -92,4 +92,18 @@ export function draftStyle(tool: AnnotationKind, color?: string): string | undef
 		return `border-color:${fill};background:${fill}55`;
 	}
 	return undefined;
+}
+
+/** Smallest and largest cursor marker edge, as a share of the image edge. */
+const MARKER_MIN = 0.012;
+const MARKER_MAX = 0.4;
+
+/** Grows or shrinks a cursor marker around its centre, so the tip stays where it was. */
+export function scaleMarker(rect: Rect, factor: number): Rect {
+	const lowest = Math.max(MARKER_MIN / rect.w, MARKER_MIN / rect.h);
+	const highest = Math.min(MARKER_MAX / rect.w, MARKER_MAX / rect.h);
+	const k = Math.min(Math.max(factor, lowest), Math.max(highest, lowest));
+	const w = rect.w * k;
+	const h = rect.h * k;
+	return { x: rect.x + rect.w / 2 - w / 2, y: rect.y + rect.h / 2 - h / 2, w, h };
 }

@@ -6,6 +6,7 @@
 - Typing now gives one screenshot, taken **Pause after typing** (new setting, default 1 s) after the last key press, instead of one per burst of keys. A scroll gives one screenshot once the wheel stops.
 - The minimum gap between steps now applies only to visual change detection.
 - The floating recording controls no longer appear in the screenshots: the window is excluded from screen capture by the operating system.
+- A cursor marker can be resized: select it, then use the mouse wheel over it or the − / + buttons. The size is kept in exports.
 - The date under the title is now an editable field. Left empty, exports still use the day they are made.
 - The Version and Author fields in the guide are wider.
 
