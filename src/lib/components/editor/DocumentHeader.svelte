@@ -82,7 +82,7 @@
 		};
 	});
 
-	// The real date is stamped at export time; this is only a preview of it.
+	// Shown as the hint while the date field is empty: exports then use the day they are made.
 	const today = new Date().toLocaleDateString('sv-SE');
 
 	function commitPrereq() {
@@ -144,9 +144,14 @@
 	></textarea>
 
 	<div class="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-(--text)/56">
-		<span
-			class="tabular-nums"
-			data-tooltip="Filled in automatically on the day you export">{today}</span>
+		<InlineField
+			value={project.date ?? ''}
+			label="Date"
+			placeholder={today}
+			maxlength={LIMITS.documentDate}
+			onCommit={(value) => patchMeta({ date: value })}
+			class="-mx-1 min-w-28 tabular-nums text-(--text)/72"
+		/>
 		<span aria-hidden="true">·</span>
 		<span>{words.version}</span>
 		<InlineField
@@ -155,7 +160,7 @@
 			placeholder="1.0"
 			maxlength={LIMITS.documentVersion}
 			onCommit={(value) => patchMeta({ version: value })}
-			class="-mx-1 text-(--text)/72"
+			class="-mx-1 min-w-20 text-(--text)/72"
 		/>
 		<span aria-hidden="true">·</span>
 		<span>{words.author}</span>
@@ -165,7 +170,7 @@
 			placeholder="Your name"
 			maxlength={LIMITS.documentAuthor}
 			onCommit={(value) => patchMeta({ author: value })}
-			class="-mx-1 text-(--text)/72"
+			class="-mx-1 min-w-44 text-(--text)/72"
 		/>
 	</div>
 

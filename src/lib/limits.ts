@@ -6,6 +6,7 @@ export const LIMITS = {
 	prerequisitesMax: 10,
 	documentVersion: 40,
 	documentAuthor: 80,
+	documentDate: 40,
 	documentLabel: 60,
 	stepTitle: 80,
 	stepBody: 2000,

@@ -204,6 +204,14 @@ test.describe("document details", () => {
     await expect.poll(() => meta(app)).toEqual([{ version: "2.3" }, { author: "Erik" }]);
   });
 
+  test("the date is an editable field", async ({ app }) => {
+    await app.openGuide();
+    const date = app.page.getByRole("textbox", { name: "Date", exact: true });
+    await date.fill("12 March 2026");
+    await date.press("Enter");
+    await expect.poll(() => meta(app)).toEqual([{ date: "12 March 2026" }]);
+  });
+
   test("an unchanged field saves nothing", async ({ app }) => {
     await app.openGuide();
     const version = app.page.getByRole("textbox", { name: "Version", exact: true });

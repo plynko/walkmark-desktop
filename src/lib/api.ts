@@ -117,6 +117,7 @@ export const updateProjectMeta = (meta: {
   language?: string;
   version?: string;
   author?: string;
+  date?: string;
 }) => call<Project>("update_project_meta", { meta });
 
 /** The fixed wording exports print for `language`. */

@@ -536,6 +536,7 @@ class AppStore {
     language?: string;
     version?: string;
     author?: string;
+    date?: string;
   }) {
     const current = this.project;
     if (!current) return;

@@ -552,6 +552,9 @@ pub struct Project {
     /// Who made the guide, shown under the title in exports.
     #[serde(default)]
     pub author: String,
+    /// Date printed under the title. Empty means the day of the export.
+    #[serde(default)]
+    pub date: String,
     #[serde(default)]
     pub steps: Vec<Step>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -573,6 +576,7 @@ impl Project {
             language: default_language(),
             version: default_document_version(),
             author: String::new(),
+            date: String::new(),
             steps: Vec::new(),
             deleted_steps: Vec::new(),
         }

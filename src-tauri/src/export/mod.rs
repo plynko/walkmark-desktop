@@ -63,7 +63,8 @@ fn default_true() -> bool {
     true
 }
 
-/// The parts of the line under the title, e.g. `["2026-11-23",
+/// The parts of the line under the title (the guide's date, or the export day
+/// when it has none), e.g. `["2026-11-23",
 /// "Version 1.0", "Author Erik"]`. Version and author are left out while empty.
 /// The labels come from Settings for the guide's language.
 pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<String> {
@@ -72,7 +73,11 @@ pub(crate) fn detail_parts(project: &Project, options: &ExportOptions) -> Vec<St
     }
     let labels = &options.labels;
     let mut parts = Vec::new();
-    if !options.exported_on.is_empty() {
+    // The guide's own date wins; without one the day of the export is used.
+    let date = project.date.trim();
+    if !date.is_empty() {
+        parts.push(date.to_string());
+    } else if !options.exported_on.is_empty() {
         parts.push(options.exported_on.clone());
     }
     if !project.version.trim().is_empty() {
@@ -289,6 +294,14 @@ mod tests {
             detail_parts(&project, &italian),
             ["2026-11-23", "Versione 2.1", "Autore Erik"]
         );
+    }
+
+    #[test]
+    fn the_guides_own_date_replaces_the_export_day() {
+        let mut project = Project::new("Guide", "");
+        project.version = String::new();
+        project.date = " 12 March 2026 ".into();
+        assert_eq!(detail_parts(&project, &dated()), ["12 March 2026"]);
     }
 
     #[test]

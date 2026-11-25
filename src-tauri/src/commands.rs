@@ -443,6 +443,7 @@ pub struct ProjectMeta {
     pub language: Option<String>,
     pub version: Option<String>,
     pub author: Option<String>,
+    pub date: Option<String>,
 }
 
 #[tauri::command]
@@ -483,6 +484,9 @@ pub fn update_project_meta(
     }
     if let Some(author) = meta.author {
         project.author = limits::clamp_trim(&author, limits::DOCUMENT_AUTHOR);
+    }
+    if let Some(date) = meta.date {
+        project.date = limits::clamp_trim(&date, limits::DOCUMENT_DATE);
     }
     project.touch();
     storage::save_project(&app, project)?;

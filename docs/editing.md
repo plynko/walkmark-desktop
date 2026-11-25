@@ -12,7 +12,7 @@ At the top of the document:
 | --- | --- |
 | **Title** | Guide name (library card and exports) |
 | **Summary** | Short overview for readers |
-| **Version, Author** | A line under the title, next to the export date. The date is filled in on the day you export; version (default 1.0) and author are yours to edit |
+| **Version, Author** | A line under the title with the date, version (default 1.0), and author, all editable. Leave the date empty to use the day you export |
 | **Before you start** | Prerequisites — only shown when filled |
 
 The words around your text — the small heading above the title, “Before you start”, “Version”, “Author”, “Steps”, “On this page”, “Step”, the step count and the credit line — are the same for every guide in a language. They follow the guide's language and are set in **Settings → Writing → Wording in exports**.

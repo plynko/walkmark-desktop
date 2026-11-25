@@ -91,6 +91,8 @@ export interface Project {
   version: string;
   /** Who made the guide, printed under the title. */
   author: string;
+  /** Date printed under the title. Empty means the day of the export. */
+  date?: string;
   steps: Step[];
   deletedSteps?: { index: number; step: Step }[];
 }
