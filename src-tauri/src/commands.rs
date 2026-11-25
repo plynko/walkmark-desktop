@@ -272,9 +272,9 @@ pub fn recording_status(state: State<AppState>) -> RecordingStatus {
 }
 
 #[tauri::command]
-pub fn start_recording(
+pub async fn start_recording(
     app: AppHandle,
-    state: State<AppState>,
+    state: State<'_, AppState>,
     source_id: String,
     product_id: Option<String>,
 ) -> Result<Project> {
@@ -329,13 +329,16 @@ pub fn mark_step(state: State<AppState>) -> Result<()> {
 }
 
 #[tauri::command]
-pub fn stop_recording(app: AppHandle, state: State<AppState>) -> Result<Project> {
+pub async fn stop_recording(app: AppHandle, state: State<'_, AppState>) -> Result<Project> {
     let session = state.session.lock().take().ok_or(AppError::NotRecording)?;
 
     // Tell both windows immediately — before the capture thread joins.
     let _ = app.emit(crate::capture::session::EVT_TICK, session.stopping_tick());
 
-    session.stop();
+    // Sync commands run on the main thread on Windows; joining the capture
+    // worker there can deadlock against window and event dispatch, so the
+    // blocking wait happens on a worker thread instead.
+    let _ = tauri::async_runtime::spawn_blocking(move || session.stop()).await;
     window::leave_recording_mode(&app);
 
     // Steps arrive as events during the session; the frontend replays them here
