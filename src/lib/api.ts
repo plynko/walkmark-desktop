@@ -105,6 +105,9 @@ export const listProjects = () => call<ProjectSummary[]>("list_projects");
 export const openProject = (id: string) => call<Project>("open_project", { id });
 export const currentProject = () => call<Project | null>("current_project");
 export const closeProject = () => call<void>("close_project");
+export const exportArchive = (id: string, destination: string) =>
+  call<number>("export_archive", { id, destination });
+export const importArchive = () => call<ProjectSummary | null>("import_archive");
 export const deleteProject = (id: string) => call<void>("delete_project", { id });
 
 export const updateProjectMeta = (meta: {

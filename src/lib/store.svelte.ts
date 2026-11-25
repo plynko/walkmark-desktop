@@ -1,3 +1,4 @@
+import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "svelte-sonner";
 import { setMode } from "mode-watcher";
 
@@ -482,6 +483,36 @@ class AppStore {
     this.selection = [];
     this.focused = null;
     await this.refreshProjects();
+  }
+
+  async exportArchive(project: { id: string; title: string }) {
+    try {
+      const name = project.title.trim().replace(/[\\/:*?"<>|]+/g, "-") || "walkmark-guide";
+      const destination = await save({
+        defaultPath: `${name}.zip`,
+        filters: [{ name: "Walkmark archive", extensions: ["zip"] }],
+      });
+      if (!destination) return;
+      await api.exportArchive(project.id, destination);
+      this.notify({
+        tone: "success",
+        title: "Archive exported",
+        detail: destination.split(/[\\/]/).pop(),
+      });
+    } catch (error) {
+      this.reportError(error, "The archive could not be exported");
+    }
+  }
+
+  async importArchive() {
+    try {
+      const imported = await api.importArchive();
+      if (!imported) return;
+      await this.refreshProjects();
+      this.notify({ tone: "success", title: "Archive imported", detail: imported.title });
+    } catch (error) {
+      this.reportError(error, "The archive could not be imported");
+    }
   }
 
   async removeProject(id: string) {

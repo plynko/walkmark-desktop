@@ -1,4 +1,5 @@
 mod ai;
+mod archive;
 mod capture;
 mod commands;
 mod error;
@@ -199,6 +200,8 @@ pub fn run() {
             commands::document_labels,
             commands::suggest_export_name,
             commands::export_document,
+            commands::export_archive,
+            commands::import_archive,
             commands::copy_as_markdown,
         ])
         .run(tauri::generate_context!())

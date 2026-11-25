@@ -125,15 +125,25 @@
 					<Icon icon="lucide:circle-dot" class="size-4" />
 					Record your first guide
 				</Button>
+				<Button class="mt-3" variant="ghost" onclick={() => void store.importArchive()}>
+					<Icon icon="lucide:upload" class="size-4" />
+					Import an archive
+				</Button>
 			</section>
 			{@render notices("mt-6")}
 		{:else}
 			{@render notices("mb-8")}
 			<section>
 				<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<h2 class="text-xs font-medium uppercase tracking-wider text-(--text)/40">
-						Your documents
-					</h2>
+					<div class="flex items-center gap-3">
+						<h2 class="text-xs font-medium uppercase tracking-wider text-(--text)/40">
+							Your documents
+						</h2>
+						<Button size="sm" variant="ghost" onclick={() => void store.importArchive()}>
+							<Icon icon="lucide:upload" class="size-3.5" />
+							Import
+						</Button>
+					</div>
 					<div class="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:items-center">
 						<div class="relative min-w-0 flex-1">
 							<Icon
@@ -394,6 +404,10 @@
 			>
 				<Icon icon="lucide:download" />
 				Export…
+			</DropdownMenuItem>
+			<DropdownMenuItem onclick={() => void store.exportArchive(project)}>
+				<Icon icon="lucide:download" />
+				Export archive (.zip)
 			</DropdownMenuItem>
 			<DropdownMenuItem
 				variant="destructive"

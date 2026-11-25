@@ -68,3 +68,7 @@ Steps without body text still export if included — placeholders may appear. Th
 - Redact in the image editor first — exports reflect annotations, not raw frames.
 
 See [Editing guides](editing.md) for exclude, annotations, and locked steps.
+
+## Archives (.zip)
+
+To back up a guide or move it to another computer, choose **Export archive (.zip)** in a document's **⋯** menu in the library. The zip holds the whole guide: its text, steps and screenshots. To restore it, select **Import** in the library and pick the zip. The guide is added as a new document, so importing never overwrites an existing one.

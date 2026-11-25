@@ -7,6 +7,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::DialogExt;
 
 use crate::ai;
+use crate::archive;
 use crate::capture::{self, session::Session};
 use crate::error::{AppError, Result};
 use crate::export::{self, ExportOptions, ExportResult};
@@ -998,6 +999,40 @@ pub async fn export_document(
     // would visibly stall the window.
     tauri::async_runtime::spawn_blocking(move || {
         export::write(&app, &project, &options, std::path::Path::new(&destination))
+    })
+    .await
+    .map_err(|e| AppError::Other(e.to_string()))?
+}
+
+/// Writes a whole document (data and screenshots) to a portable `.zip`.
+#[tauri::command]
+pub async fn export_archive(app: AppHandle, id: String, destination: String) -> Result<u64> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let project = storage::load_project(&app, &id)?;
+        archive::export(&app, &project, std::path::Path::new(&destination))
+    })
+    .await
+    .map_err(|e| AppError::Other(e.to_string()))?
+}
+
+/// Asks for a `.zip` and adds its document to the library. `None` means the
+/// user cancelled the picker.
+#[tauri::command]
+pub async fn import_archive(app: AppHandle) -> Result<Option<ProjectSummary>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = app
+            .dialog()
+            .file()
+            .set_title("Import a Walkmark archive")
+            .add_filter("Walkmark archive", &["zip"])
+            .blocking_pick_file()
+        else {
+            return Ok(None);
+        };
+        let path = file
+            .into_path()
+            .map_err(|_| AppError::Invalid("Choose a local .zip file.".into()))?;
+        archive::import(&app, &path).map(Some)
     })
     .await
     .map_err(|e| AppError::Other(e.to_string()))?

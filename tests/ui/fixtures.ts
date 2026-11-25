@@ -162,6 +162,10 @@ function installTauriMock(language: string) {
         return { active: false, state: "idle", stepCount: 0 };
       case "list_projects":
         return [summary()];
+      case "import_archive":
+        return null;
+      case "export_archive":
+        return 0;
       case "current_project":
         return null;
       case "open_project":
