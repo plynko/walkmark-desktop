@@ -29,7 +29,7 @@ Walkmark uses two mechanisms:
 
 ### Input-based capture (preferred on macOS)
 
-When **Accessibility** permission is granted, Walkmark listens for clicks, key presses, and scrolls. Every **click** gets its own screenshot, taken a fraction of a second (20 ms) after the click. After a key press or a scroll it waits **Pause after each action** (default 300 ms), then grabs a frame.
+When **Accessibility** permission is granted, Walkmark listens for clicks, key presses, and scrolls. Every **click** gets its own screenshot, taken **Pause after each action** (default 300 ms) after the click. A scroll gets one screenshot that long after the wheel stops. Typing gets one screenshot **Pause after typing** (default 1 s) after the last key press, not one per key.
 
 This produces frames aligned with what you did, not arbitrary animation mid-flight.
 
@@ -47,7 +47,7 @@ Tune **Visual sensitivity** and **Wait for the screen to settle** when visual fa
 
 ### Minimum gap
 
-A cooldown (default **800 ms**) between automatic steps from key presses, scrolling, and screen changes. It keeps rapid typing and key repeat from flooding the guide with near-duplicate frames. Clicks ignore it: each click is captured, so a double-click gives two steps that you can merge in the editor.
+A cooldown (default **800 ms**) between steps detected from screen changes (visual fallback only). Clicks, typing, and scrolling ignore it: each click is captured, so a double-click gives two steps that you can merge in the editor.
 
 ## Recording HUD
 
@@ -88,7 +88,8 @@ All tunables live in **Settings → Recording**:
 | Setting | Default | What it does |
 | --- | --- | --- |
 | **Minimum gap between steps** | 0.8 s | Cooldown between automatic captures |
-| **Pause after each action** | 0.3 s | Wait after input before screenshot |
+| **Pause after each action** | 0.3 s | Wait after a click or scroll before the screenshot |
+| **Pause after typing** | 1 s | One screenshot this long after the last key press |
 | **Countdown before starting** | 3 s | Delay before capture begins (0 = none) |
 | **Screen check interval** | 0.2 s | How often to sample after an action |
 | **Stored screenshot width** | 1800 px | Max width saved to disk |

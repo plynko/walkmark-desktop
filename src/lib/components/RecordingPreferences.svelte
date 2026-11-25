@@ -12,6 +12,7 @@
 	}
 
 	const inputSettleMs = $derived(settings.capture.inputSettleMs ?? 300);
+	const typingPauseMs = $derived(settings.capture.typingPauseMs ?? 1000);
 </script>
 
 <div class="space-y-5">
@@ -35,7 +36,7 @@
 				onValueChange={(v: number) => patchCapture({ minGapMs: v })}
 			/>
 			<p class="text-xs text-(--text)/56">
-				Stops key repeat and double-clicks from flooding the guide.
+				Limits steps from screen-change detection (visual fallback).
 			</p>
 		</div>
 
@@ -53,7 +54,25 @@
 				onValueChange={(v: number) => patchCapture({ inputSettleMs: v })}
 			/>
 			<p class="text-xs text-(--text)/56">
-				Waits for menus to open and typed text to appear before snapping the screen.
+				Waits after a click or scroll so menus and dialogs can open before snapping the screen.
+			</p>
+		</div>
+
+		<div class="flex flex-col gap-2">
+			<div class="flex items-center justify-between">
+				<Label>Pause after typing</Label>
+				<span class="text-xs text-(--text)/56">{(typingPauseMs / 1000).toFixed(1)}s</span>
+			</div>
+			<Slider
+				type="single"
+				value={typingPauseMs}
+				min={200}
+				max={5000}
+				step={100}
+				onValueChange={(v: number) => patchCapture({ typingPauseMs: v })}
+			/>
+			<p class="text-xs text-(--text)/56">
+				Takes one screenshot this long after the last key press, once you have finished typing.
 			</p>
 		</div>
 

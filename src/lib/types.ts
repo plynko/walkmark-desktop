@@ -116,6 +116,7 @@ export interface CaptureSettings {
   visualFallback?: boolean;
   /** Delay after a click, key press, or scroll before the screenshot is taken. */
   inputSettleMs?: number;
+  typingPauseMs?: number;
   maxWidth: number;
   countdownSecs: number;
   hideWindow: boolean;

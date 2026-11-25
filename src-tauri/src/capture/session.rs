@@ -31,9 +31,6 @@ const MAX_CONSECUTIVE_FAILURES: u32 = 6;
 /// step anyway. Without a limit, anything permanently in motion — a video, a
 /// progress spinner, a blinking terminal — would suppress every step for the
 /// whole session.
-/// Pause between a click and its screenshot, so the effect of the click (a
-/// menu opening, a button state) has time to show.
-const CLICK_DELAY: Duration = Duration::from_millis(20);
 const MAX_SETTLE_WAITS: u32 = 4;
 
 #[derive(Clone, Serialize)]
@@ -221,8 +218,12 @@ Settings, or turn on visual fallback in Recording settings."
         );
     }
 
+    // Pause after a click or scroll, so menus and dialogs have time to open.
     let input_settle = Duration::from_millis(s.input_settle_ms.clamp(0, 2000));
-    let mut input_pending: Option<Instant> = None;
+    // Quiet time after the last key press before typing counts as finished.
+    let typing_pause = Duration::from_millis(s.typing_pause_ms.clamp(200, 10_000));
+    let mut key_pending: Option<Instant> = None;
+    let mut scroll_pending: Option<Instant> = None;
     let mut committed_sig: Option<detect::Signature> = None;
     let mut prev_sig: Option<detect::Signature> = None;
     let mut prev_frame: Option<RgbaImage> = None;
@@ -273,10 +274,14 @@ Settings, or turn on visual fallback in Recording settings."
         if ctl.stop.load(Ordering::SeqCst) {
             break;
         }
-        // Every click gets its own screenshot, taken right after a short delay.
+        // Every click gets its own screenshot, after the "pause after each
+        // action" so its effect has time to show.
         let clicked = use_input && input::take_click();
         if clicked {
-            thread::sleep(CLICK_DELAY);
+            let deadline = Instant::now() + input_settle;
+            while Instant::now() < deadline && !ctl.stop.load(Ordering::SeqCst) {
+                thread::sleep(Duration::from_millis(10).min(deadline - Instant::now()));
+            }
         }
         // Frames are kept at full resolution until one is actually committed:
         // most samples are discarded, and resizing every one of them would cost
@@ -334,11 +339,15 @@ Settings, or turn on visual fallback in Recording settings."
             .map(|t| now.saturating_sub(t) >= Duration::from_millis(s.min_gap_ms))
             .unwrap_or(true);
 
-        if use_input && input::take_trigger() {
-            input_pending = Some(Instant::now());
+        if use_input && input::take_key() {
+            key_pending = Some(Instant::now());
+        }
+        if use_input && input::take_scroll() {
+            scroll_pending = Some(Instant::now());
         }
 
-        let input_ready = input_pending.is_some_and(|t| t.elapsed() >= input_settle);
+        let key_ready = key_pending.is_some_and(|t| t.elapsed() >= typing_pause);
+        let scroll_ready = scroll_pending.is_some_and(|t| t.elapsed() >= input_settle);
 
         // On the very first sample there is nothing to settle against, so treat
         // it as stable and capture the starting state immediately.
@@ -354,14 +363,17 @@ Settings, or turn on visual fallback in Recording settings."
         };
         let waited_long_enough = settle_waits >= MAX_SETTLE_WAITS;
         let visual_commit = use_visual && changed && gap_ok && (settled || waited_long_enough);
-        // Clicks skip the minimum gap; keys and scrolling keep it so typing
-        // does not produce a step per character.
-        let input_commit = use_input && input_ready && gap_ok;
+        // Typing and scrolling are captured once they stop, so they need no
+        // minimum gap; that only limits visual detection.
+        let input_commit = use_input && (key_ready || scroll_ready);
         let first_sample = committed_sig.is_none();
 
         if forced || first_sample || clicked || input_commit || visual_commit {
-            if input_commit {
-                input_pending = None;
+            if key_ready {
+                key_pending = None;
+            }
+            if scroll_ready {
+                scroll_pending = None;
             }
             settle_waits = 0;
             let manual = forced;

@@ -68,11 +68,15 @@ Controls how Walkmark decides when to capture a screenshot.
 
 ### Minimum gap between steps
 
-Cooldown between automatic steps from typing, scrolling, and visual changes (default **800 ms**). Stops a single form field from generating ten frames while you type. Clicks are not limited by it.
+Cooldown between steps detected from screen changes (default **800 ms**). Used only with visual fallback. Clicks, typing, and scrolling are not limited by it.
 
 ### Pause after each action
 
-Delay after a key press or scroll before the screenshot is taken (default **300 ms**). Gives menus and dialogs time to open. Clicks use a fixed 20 ms delay.
+Delay after a click, or after the wheel stops, before the screenshot is taken (default **300 ms**). Gives menus and dialogs time to open.
+
+### Pause after typing
+
+Typing produces one screenshot, taken this long after the last key press (default **1 s**).
 
 ### Countdown before starting
 

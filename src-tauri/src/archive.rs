@@ -81,7 +81,7 @@ pub fn import(app: &AppHandle, source: &Path) -> Result<ProjectSummary> {
 
     let result = (|| -> Result<()> {
         for index in 0..archive.len() {
-            let mut entry = archive.by_index(index).map_err(zip_err)?;
+            let entry = archive.by_index(index).map_err(zip_err)?;
             if !entry.is_file() {
                 continue;
             }

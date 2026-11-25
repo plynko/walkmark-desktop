@@ -1,8 +1,14 @@
 # Changelog
 
+## 0.2.7 — 2026-11-25
+
+- Every click now gets its own screenshot, taken after **Pause after each action**. Quick successive clicks, such as opening a menu and choosing an item, are no longer merged into one step. A double-click gives two steps.
+- Typing now gives one screenshot, taken **Pause after typing** (new setting, default 1 s) after the last key press, instead of one per burst of keys. A scroll gives one screenshot once the wheel stops.
+- The minimum gap between steps now applies only to visual change detection.
+
 ## 0.2.6 — 2026-11-25
 
-- Every click now gets its own screenshot, taken 20 ms after the click. The minimum gap between steps no longer applies to clicks (it still limits typing, scrolling and visual changes), so quick successive clicks, such as opening a menu and choosing an item, are no longer merged into one step. A double-click gives two steps.
+- Every click now gets its own screenshot, taken 20 ms after the click, and is no longer limited by the minimum gap between steps.
 
 ## 0.2.5 — 2026-11-25
 

@@ -13,8 +13,9 @@ use rdev::{Button, Event, EventType, Key};
 
 struct Listener {
     enabled: Arc<AtomicBool>,
-    triggered: Arc<AtomicBool>,
     clicked: Arc<AtomicBool>,
+    keyed: Arc<AtomicBool>,
+    scrolled: Arc<AtomicBool>,
     _handle: JoinHandle<()>,
 }
 
@@ -39,11 +40,15 @@ pub fn ensure_listener() -> bool {
 
     LISTENER.get_or_init(|| {
         let enabled = Arc::new(AtomicBool::new(false));
-        let triggered = Arc::new(AtomicBool::new(false));
-        let worker_enabled = Arc::clone(&enabled);
-        let worker_triggered = Arc::clone(&triggered);
         let clicked = Arc::new(AtomicBool::new(false));
-        let worker_clicked = Arc::clone(&clicked);
+        let keyed = Arc::new(AtomicBool::new(false));
+        let scrolled = Arc::new(AtomicBool::new(false));
+        let worker_enabled = Arc::clone(&enabled);
+        let worker = Flags {
+            clicked: Arc::clone(&clicked),
+            keyed: Arc::clone(&keyed),
+            scrolled: Arc::clone(&scrolled),
+        };
 
         let handle = thread::Builder::new()
             .name("walkmark-input".into())
@@ -55,7 +60,7 @@ pub fn ensure_listener() -> bool {
 
                 if let Err(error) = rdev::listen(move |event| {
                     if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        handle_event(&event, &worker_enabled, &worker_triggered, &worker_clicked);
+                        handle_event(&event, &worker_enabled, &worker);
                     }))
                     .is_err()
                     {
@@ -72,8 +77,9 @@ pub fn ensure_listener() -> bool {
                 eprintln!("walkmark input listener could not start: {error}");
                 return Listener {
                     enabled,
-                    triggered,
                     clicked,
+                    keyed,
+                    scrolled,
                     _handle: thread::Builder::new()
                         .spawn(|| {})
                         .expect("spawn noop input listener fallback"),
@@ -83,8 +89,9 @@ pub fn ensure_listener() -> bool {
 
         Listener {
             enabled,
-            triggered,
             clicked,
+            keyed,
+            scrolled,
             _handle: handle,
         }
     });
@@ -92,54 +99,68 @@ pub fn ensure_listener() -> bool {
     true
 }
 
-fn handle_event(event: &Event, enabled: &AtomicBool, triggered: &AtomicBool, clicked: &AtomicBool) {
+struct Flags {
+    clicked: Arc<AtomicBool>,
+    keyed: Arc<AtomicBool>,
+    scrolled: Arc<AtomicBool>,
+}
+
+fn handle_event(event: &Event, enabled: &AtomicBool, flags: &Flags) {
     if !enabled.load(Ordering::Relaxed) {
         return;
     }
     // Always evaluated: it also tracks which modifier keys are held.
-    let triggers = event_triggers_step(event);
-    if is_click(event) {
-        clicked.store(true, Ordering::SeqCst);
-    } else if triggers {
-        triggered.store(true, Ordering::SeqCst);
+    if !event_triggers_step(event) {
+        return;
     }
-}
-
-fn is_click(event: &Event) -> bool {
-    matches!(
-        event.event_type,
-        EventType::ButtonPress(Button::Left | Button::Right | Button::Middle)
-    )
+    match event.event_type {
+        EventType::KeyPress(_) => flags.keyed.store(true, Ordering::SeqCst),
+        EventType::Wheel { .. } => flags.scrolled.store(true, Ordering::SeqCst),
+        EventType::ButtonPress(_) => flags.clicked.store(true, Ordering::SeqCst),
+        _ => {}
+    }
 }
 
 pub fn set_enabled(enabled: bool) {
     if let Some(listener) = LISTENER.get() {
         listener.enabled.store(enabled, Ordering::SeqCst);
         if !enabled {
-            listener.triggered.store(false, Ordering::SeqCst);
-            listener.clicked.store(false, Ordering::SeqCst);
+            for flag in [&listener.clicked, &listener.keyed, &listener.scrolled] {
+                flag.store(false, Ordering::SeqCst);
+            }
         }
     }
 }
 
-pub fn take_trigger() -> bool {
+fn take(pick: impl Fn(&Listener) -> &Arc<AtomicBool>) -> bool {
     LISTENER
         .get()
-        .is_some_and(|l| l.triggered.swap(false, Ordering::SeqCst))
+        .is_some_and(|l| pick(l).swap(false, Ordering::SeqCst))
 }
 
-/// A mouse click happened since the last call. Clicks are handled apart from
-/// keys and scrolling: each one gets its own screenshot.
+/// A mouse click happened since the last call. Each click gets its own
+/// screenshot.
 pub fn take_click() -> bool {
-    LISTENER
-        .get()
-        .is_some_and(|l| l.clicked.swap(false, Ordering::SeqCst))
+    take(|l| &l.clicked)
+}
+
+/// A key was pressed since the last call. The screenshot is taken once typing
+/// stops, not per key.
+pub fn take_key() -> bool {
+    take(|l| &l.keyed)
+}
+
+/// The wheel moved since the last call.
+pub fn take_scroll() -> bool {
+    take(|l| &l.scrolled)
 }
 
 pub fn has_trigger() -> bool {
-    LISTENER
-        .get()
-        .is_some_and(|l| l.triggered.load(Ordering::Relaxed) || l.clicked.load(Ordering::Relaxed))
+    LISTENER.get().is_some_and(|l| {
+        [&l.clicked, &l.keyed, &l.scrolled]
+            .iter()
+            .any(|f| f.load(Ordering::Relaxed))
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -253,14 +274,41 @@ mod tests {
     }
 
     #[test]
-    fn only_button_presses_count_as_clicks() {
-        assert!(is_click(&event(EventType::ButtonPress(Button::Left))));
-        assert!(!is_click(&event(EventType::ButtonRelease(Button::Left))));
-        assert!(!is_click(&event(EventType::KeyPress(Key::KeyA))));
-        assert!(!is_click(&event(EventType::Wheel {
-            delta_x: 0,
-            delta_y: 1
-        })));
+    fn events_are_sorted_into_click_key_and_scroll() {
+        let flags = Flags {
+            clicked: Arc::new(AtomicBool::new(false)),
+            keyed: Arc::new(AtomicBool::new(false)),
+            scrolled: Arc::new(AtomicBool::new(false)),
+        };
+        let enabled = AtomicBool::new(true);
+        let read = |f: &Arc<AtomicBool>| f.swap(false, Ordering::SeqCst);
+
+        handle_event(
+            &event(EventType::ButtonPress(Button::Left)),
+            &enabled,
+            &flags,
+        );
+        assert!(read(&flags.clicked) && !read(&flags.keyed) && !read(&flags.scrolled));
+
+        handle_event(&event(EventType::KeyPress(Key::KeyA)), &enabled, &flags);
+        assert!(read(&flags.keyed) && !read(&flags.clicked) && !read(&flags.scrolled));
+
+        handle_event(
+            &event(EventType::Wheel {
+                delta_x: 0,
+                delta_y: 1,
+            }),
+            &enabled,
+            &flags,
+        );
+        assert!(read(&flags.scrolled) && !read(&flags.clicked) && !read(&flags.keyed));
+
+        handle_event(
+            &event(EventType::ButtonRelease(Button::Left)),
+            &enabled,
+            &flags,
+        );
+        assert!(!read(&flags.clicked));
     }
 
     #[test]

@@ -40,6 +40,7 @@ pub fn save_settings(
     settings.capture.sensitivity = settings.capture.sensitivity.clamp(0.0, 1.0);
     settings.capture.min_gap_ms = settings.capture.min_gap_ms.clamp(0, 30_000);
     settings.capture.input_settle_ms = settings.capture.input_settle_ms.clamp(0, 2000);
+    settings.capture.typing_pause_ms = settings.capture.typing_pause_ms.clamp(200, 10_000);
     settings.capture.max_width = settings.capture.max_width.clamp(800, 4000);
     settings.capture.countdown_secs = settings.capture.countdown_secs.min(10);
     settings.normalize_products();

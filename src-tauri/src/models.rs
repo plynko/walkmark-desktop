@@ -745,7 +745,7 @@ pub struct CaptureSettings {
     /// 0 = only huge changes become steps, 1 = almost every change does.
     /// Used only when [`Self::visual_fallback`] is enabled.
     pub sensitivity: f32,
-    /// Never emit two steps closer together than this.
+    /// Never emit two visually detected steps closer together than this.
     pub min_gap_ms: u64,
     /// Wait for the screen to stop changing before committing a step, so we
     /// don't capture half-open menus or mid-flight animations.
@@ -755,10 +755,13 @@ pub struct CaptureSettings {
     /// or as a supplement to catch transitions input misses.
     #[serde(default)]
     pub visual_fallback: bool,
-    /// After a click, key press or scroll, wait this long before taking the
-    /// screenshot so menus and typed text have time to appear.
+    /// After a click or scroll, wait this long before taking the screenshot so
+    /// menus and dialogs have time to appear.
     #[serde(default = "default_input_settle_ms")]
     pub input_settle_ms: u64,
+    /// Typing is captured once, this long after the last key press.
+    #[serde(default = "default_typing_pause_ms")]
+    pub typing_pause_ms: u64,
     /// Longest edge of stored frames. Keeps retina captures from ballooning.
     pub max_width: u32,
     pub countdown_secs: u32,
@@ -770,6 +773,10 @@ fn default_input_settle_ms() -> u64 {
     300
 }
 
+fn default_typing_pause_ms() -> u64 {
+    1000
+}
+
 impl Default for CaptureSettings {
     fn default() -> Self {
         Self {
@@ -779,6 +786,7 @@ impl Default for CaptureSettings {
             settle: true,
             visual_fallback: false,
             input_settle_ms: 300,
+            typing_pause_ms: 1000,
             max_width: 1800,
             countdown_secs: 3,
             hide_window: true,
